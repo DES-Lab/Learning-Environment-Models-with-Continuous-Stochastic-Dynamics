@@ -1,9 +1,12 @@
 import gym
+import aalpy.paths
 
 from prism_scheduler import PrismInterface
 from aalpy.utils import load_automaton_from_file
 
 from utils import load
+
+aalpy.paths.path_to_prism = "C:/Program Files/prism-4.6/bin/prism.bat"
 
 model = load_automaton_from_file('mdp_dqn.dot', 'mdp')
 model.make_input_complete(missing_transition_go_to='sink_state')
@@ -18,9 +21,7 @@ env = gym.make('LunarLander-v2')
 
 for _ in range(10):
     obs = env.reset()
-    obs = prism_interface.reset()
-    cluster = clustering_function.predict(obs.reshape(1,-1))
-    prism_interface.step_to()
+    prism_interface.reset()
     reward = 0
     while True:
         action = prism_interface.get_input()
@@ -31,7 +32,7 @@ for _ in range(10):
 
         obs = clustering_function.predict(obs.reshape(1,-1))
         reached_state = prism_interface.step_to(action, obs)
-
+        env.render()
         if reached_state is None:
             done = True
             reward = -1000

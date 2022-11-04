@@ -140,9 +140,7 @@ else:
         all_data.append(get_traces_from_policy(agent, env, num_traces))
     save(all_data, traces_file_name)
 
-clustering_function, pca = compute_clustering_function(all_data, n_clusters=num_clusters, reduce_dimensions=False)
-save(clustering_function, 'k_means_16')
-exit()
+# clustering_function, pca = compute_clustering_function(all_data, n_clusters=num_clusters, reduce_dimensions=False)
 # compute_clustering_function_and_map_to_traces(all_data, num_clusters, reduce_dimensions=False)
 # exit()
 # print('Clustering function computed')
