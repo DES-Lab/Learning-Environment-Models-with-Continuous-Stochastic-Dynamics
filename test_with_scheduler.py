@@ -36,7 +36,7 @@ for _ in range(10):
         obs = f'c{clustering_function.predict(obs.reshape(1,-1))[0]}'
         reached_state = prism_interface.step_to(action, obs)
         # env.render()
-        if reached_state is None:
+        if not reached_state:
             done = True
             reward = -1000
             print('Run into state that is unreachable in the model.')
