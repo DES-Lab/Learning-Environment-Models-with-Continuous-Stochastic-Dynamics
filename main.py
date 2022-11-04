@@ -10,6 +10,7 @@ from agents import load_agent
 
 
 # action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
+from utils import load, save
 
 
 def get_traces_from_policy(agent, env, num_episodes):
@@ -75,12 +76,19 @@ dqn_agent = load_agent('araffin/ppo-LunarLander-v2', 'ppo-LunarLander-v2.zip', A
 a2c_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 print('Agents loaded')
 
-num_traces = 1500
+num_traces = 2000
 num_clusters = 16
 
-all_data = []
-for agent in [dqn_agent, a2c_agent]:
-    all_data.append(get_traces_from_policy(agent, env, num_traces))
+traces_file_name = 'lunar_lander_dqn_a2c_traces'
+
+loaded_traces = load(f'{traces_file_name}.pickle')
+if loaded_traces:
+    all_data = loaded_traces
+else:
+    all_data = []
+    for agent in [dqn_agent, a2c_agent]:
+        all_data.append(get_traces_from_policy(agent, env, num_traces))
+        save(all_data, traces_file_name)
 
 print('Traces obtained')
 clustering_function, pca = compute_clustering_function(all_data, n_clusters=num_clusters, reduce_dimensions=False)
