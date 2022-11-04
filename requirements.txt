@@ -1,5 +1,4 @@
 aalpy
-gym
 scikit-learn
 stable-baselines3[extra]
 huggingface_sb3
