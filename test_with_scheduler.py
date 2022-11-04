@@ -25,14 +25,17 @@ for _ in range(10):
     reward = 0
     while True:
         action = prism_interface.get_input()
-        action = input_map[action]
+        if action is None:
+            print('Cannot schedule an action')
+            break
+        concrete_action = input_map[action]
 
-        obs, rew, done, info = env.step(action)
+        obs, rew, done, info = env.step(concrete_action)
         reward += rew
 
-        obs = clustering_function.predict(obs.reshape(1,-1))
+        obs = f'c{clustering_function.predict(obs.reshape(1,-1))[0]}'
         reached_state = prism_interface.step_to(action, obs)
-        env.render()
+        # env.render()
         if reached_state is None:
             done = True
             reward = -1000
