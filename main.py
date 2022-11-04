@@ -66,6 +66,7 @@ def compute_clustering_function_and_map_to_traces(all_policy_traces, n_clusters=
 
     clustering_function = KMeans(n_clusters=n_clusters)
     clustering_function.fit(observation_space)
+    save(clustering_function, 'k_means_16')
     cluster_labels = list(clustering_function.labels_)
     print('Cluster labels computed')
 

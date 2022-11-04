@@ -21,7 +21,10 @@ env = gym.make('LunarLander-v2')
 
 for _ in range(10):
     obs = env.reset()
+    obs = f'c{clustering_function.predict(obs.reshape(1, -1))[0]}'
+
     prism_interface.reset()
+    # prism_interface.step_to('right_engine', obs)
     reward = 0
     while True:
         action = prism_interface.get_input()
