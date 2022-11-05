@@ -41,18 +41,28 @@ class PrismInterface:
     def reset(self):
         self.current_state = self.parser.initial_state
 
+    def poss_step_to(self, input):
+        output_labels = []
+        trans_from_current = self.parser.transition_dict[self.current_state]
+        found_state = False
+        for (prob, action, target_state) in trans_from_current:
+            if action == input:
+                output_labels.extend(self.parser.label_dict[target_state])
+        return output_labels
+
     def step_to(self, input, output):
+        reached_state = None
         trans_from_current = self.parser.transition_dict[self.current_state]
         found_state = False
         for (prob, action, target_state) in trans_from_current:
             if action == input and output in self.parser.label_dict[target_state]:
-                self.current_state = target_state
+                reached_state = self.current_state = target_state
                 found_state = True
                 break
         if not found_state:
-            self.current_state = None
+            reached_state = None
 
-        return found_state
+        return reached_state
 
     def call_prism(self):
         import subprocess

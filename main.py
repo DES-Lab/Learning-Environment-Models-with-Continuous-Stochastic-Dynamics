@@ -1,3 +1,5 @@
+import pickle
+
 import gym
 import numpy as np
 from aalpy.learning_algs import run_Alergia
@@ -20,7 +22,6 @@ def get_traces_from_policy(agent, env, num_episodes):
         while True:
             action, _ = agent.predict(observation)
             observation, reward, done, info = env.step(action)
-
             episode_trace.append((observation.reshape(1, -1), action, reward, done))
             if done:
                 break
@@ -49,7 +50,9 @@ def compute_clustering_function(all_policy_traces, n_clusters=16, reduce_dimensi
     return clustering_function, pca
 
 
-def compute_clustering_function_and_map_to_traces(all_policy_traces, n_clusters=16, reduce_dimensions=False,
+def compute_clustering_function_and_map_to_traces(all_policy_traces, n_clusters=16,
+                                                  scale=False,
+                                                  reduce_dimensions=False,
                                                   include_reward_in_output=False):
     observation_space = []
     for sampled_data in all_policy_traces:
@@ -57,36 +60,55 @@ def compute_clustering_function_and_map_to_traces(all_policy_traces, n_clusters=
 
     observation_space = np.array(observation_space)
     observation_space = np.squeeze(observation_space)
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.preprocessing import MinMaxScaler
+
+    scaler = StandardScaler()
+    scaler.fit(observation_space)
+    with open(f'standard_scaler_{num_traces}.pickle', 'wb') as handle:
+        pickle.dump(scaler, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     pca = None
     if reduce_dimensions:
-        pca = PCA(n_components=16)
+        pca = PCA(n_components=4)
         observation_space = pca.fit_transform(observation_space)
+
+        with open(f'pca_4.pickle', 'wb') as handle:
+            pickle.dump(pca, handle, protocol=pickle.HIGHEST_PROTOCOL)
         print('Dimensions reduced with PCA')
 
+    if scale:
+        observation_space = scaler.transform(observation_space)
     clustering_function = KMeans(n_clusters=n_clusters)
     clustering_function.fit(observation_space)
-    save(clustering_function, 'k_means_16')
+    save(clustering_function, f'k_means_scale_{scale}_{num_clusters}_{num_traces}')
     cluster_labels = list(clustering_function.labels_)
     print('Cluster labels computed')
 
     alergia_datasets = []
 
+    label_i = 0
     for policy_samples in all_policy_traces:
         dataset = []
         for sample in policy_samples:
             alergia_sample = ['INIT']
             for _, action, reward, done in sample:
-                cluster_label = f'c{cluster_labels.pop(0)}'
-                if include_reward_in_output:
-                    cluster_label += f'_{round(reward, 2)}'
-                alergia_sample.append(
-                    (action_map[int(action)], cluster_label if not done else 'DONE'))  # action_map[int(action)]
+                # cluster_label = f'c{cluster_labels.pop(0)}'
+                cluster_label = f'c{cluster_labels[label_i]}'
+                label_i+=1
+                #if include_reward_in_output:
+               # cluster_label += f'_{round(reward, 2)}'
+                if reward > 1 and done:
+                    alergia_sample.append(
+                        (action_map[int(action)],"succ"))
+                else:
+                    alergia_sample.append(
+                        (action_map[int(action)], cluster_label if not done else 'DONE'))  # action_map[int(action)]
 
             dataset.append(alergia_sample)
         alergia_datasets.append(dataset)
 
-    assert len(cluster_labels) == 0
+    #assert len(cluster_labels) == 0
     print('Cluster labels replaced')
     return alergia_datasets
 
@@ -124,8 +146,8 @@ if environment == 'LunarLander-v2':
 assert agents
 print('Agents loaded')
 
-num_traces = 2000
-num_clusters = 16
+num_traces = 6000
+num_clusters = 32
 
 env = gym.make(environment, )
 traces_file_name = f'{environment}_{agent_names}_{num_traces}_traces'
@@ -145,11 +167,19 @@ else:
 # compute_clustering_function_and_map_to_traces(all_data, num_clusters, reduce_dimensions=False)
 # exit()
 # print('Clustering function computed')
+scale = True
+alergia_traces = compute_clustering_function_and_map_to_traces(all_data,
+                                                               num_clusters,
+                                                               scale = scale,
+                                                               reduce_dimensions=False)
 
-alergia_traces = compute_clustering_function_and_map_to_traces(all_data, num_clusters, reduce_dimensions=False)
 
-mdp_dqn = run_Alergia(alergia_traces[0], automaton_type='mdp', print_info=True)
-mdp_a2c = run_Alergia(alergia_traces[1], automaton_type='mdp', print_info=True)
+# mdp_dqn = run_Alergia(alergia_traces[0],eps=0.05, automaton_type='mdp', print_info=True)
+# mdp_a2c = run_Alergia(alergia_traces[1],eps=0.05, automaton_type='mdp', print_info=True)
+all_traces = alergia_traces[0]
+all_traces.extend(alergia_traces[1])
+mdp_a2c = run_Alergia(all_traces,eps=0.005, automaton_type='mdp', print_info=True)
 
-mdp_dqn.save('mdp_dqn')
-mdp_a2c.save('mdp_a2c')
+# mdp_dqn.save(f'mdp_dqn_{num_clusters}')
+# mdp_a2c.save(f'mdp_a2c_{num_clusters}')
+mdp_a2c.save(f'mdp_combined_scale_{scale}_{num_clusters}_{num_traces}')
