@@ -10,14 +10,14 @@ from utils import load
 
 aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.7-linux64/bin/prism"
 
-model = load_automaton_from_file('mdp_combined_scale_True_48_10000.dot', 'mdp')
+model = load_automaton_from_file('mdp_combined_scale_True_64_10000.dot', 'mdp')
 model.make_input_complete(missing_transition_go_to='sink_state')
-prism_interface = PrismInterface("succ", model)
+prism_interface = PrismInterface(["succ","pos"], model)
 
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 input_map = {v:k for k, v in action_map.items()}
 
-clustering_function = load('k_means_scale_True_48_10000.pickle')
+clustering_function = load('k_means_scale_True_64_10000.pickle')
 scaler = load("standard_scaler_10000.pickle")
 
 env = gym.make('LunarLander-v2')
