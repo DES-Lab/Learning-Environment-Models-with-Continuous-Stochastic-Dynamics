@@ -11,12 +11,17 @@ class PrismInterface:
         self.destination = destination
         self.model = model
         self.num_steps = num_steps
+
+        if type(destination) != list:
+            destination = destination
+        destination = "_or_".join(destination)
         self.tmp_mdp_file = (self.tmp_dir / f"po_rl_{destination}.prism")
         # self.tmp_prop_file = f"{self.tmp_dir_name}/po_rl.props"
         self.current_state = None
         self.tmp_dir.mkdir(exist_ok=True)
         self.prism_property = self.create_mc_query()
         mdp_2_prism_format(self.model, "porl", output_path=self.tmp_mdp_file)
+
         self.adv_file_name = (self.tmp_dir.absolute() / f"sched_{destination}.adv")
         self.concrete_model_name = str(self.tmp_dir.absolute() / f"concrete_model_{destination}")
         self.property_val = 0
@@ -25,7 +30,14 @@ class PrismInterface:
                                            self.concrete_model_name + ".tra")
 
     def create_mc_query(self):
-        prop = f"Pmax=?[F \"{self.destination}\"]" if not self.num_steps else f'Pmax=?[F<{self.num_steps} \"{self.destination}\"]'
+        if type(self.destination) != list:
+            destination = [self.destination]
+        else:
+            destination = self.destination
+        destination = "|".join(map(lambda d : f"\"{d}\"",destination))
+
+        prop = f"Pmax=?[F {destination}]" if not self.num_steps else \
+            f'Pmax=?[F<{self.num_steps} {destination}]'
         return prop
 
     def get_input(self):
@@ -76,9 +88,9 @@ class PrismInterface:
                 destination_in_model = True
                 break
 
-        if not destination_in_model:
-            print('SCHEDULER NOT COMPUTED')
-            return self.property_val
+        # if not destination_in_model:
+        #     print('SCHEDULER NOT COMPUTED')
+        #     return self.property_val
 
         prism_file = aalpy.paths.path_to_prism.split('/')[-1]
         path_to_prism_file = aalpy.paths.path_to_prism[:-len(prism_file)]
