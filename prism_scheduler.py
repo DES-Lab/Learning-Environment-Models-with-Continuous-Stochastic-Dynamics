@@ -72,7 +72,7 @@ class PrismInterface:
 
         destination_in_model=False
         for s in self.model.states:
-            if s.output == self.destination:
+            if self.destination in s.output.split("__"):
                 destination_in_model = True
                 break
 

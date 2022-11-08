@@ -17,7 +17,6 @@ def get_traces_from_policy(agent, env, num_episodes):
     traces = []
     for _ in range(num_episodes):
         observation = env.reset()
-
         episode_trace = []
         while True:
             action, _ = agent.predict(observation)
@@ -85,6 +84,7 @@ def compute_clustering_function_and_map_to_traces(all_policy_traces, n_clusters=
     cluster_labels = list(clustering_function.labels_)
     print('Cluster labels computed')
 
+    del observation_space
     alergia_datasets = []
 
     label_i = 0
@@ -98,9 +98,12 @@ def compute_clustering_function_and_map_to_traces(all_policy_traces, n_clusters=
                 label_i+=1
                 #if include_reward_in_output:
                # cluster_label += f'_{round(reward, 2)}'
-                if reward > 1 and done:
+                if reward == 100 and done:
                     alergia_sample.append(
-                        (action_map[int(action)],"succ"))
+                        (action_map[int(action)],f"succ__{cluster_label}"))
+                if reward >= 1 and done:
+                    alergia_sample.append(
+                        (action_map[int(action)],f"pos__{cluster_label}"))
                 else:
                     alergia_sample.append(
                         (action_map[int(action)], cluster_label if not done else 'DONE'))  # action_map[int(action)]
@@ -146,8 +149,8 @@ if environment == 'LunarLander-v2':
 assert agents
 print('Agents loaded')
 
-num_traces = 6000
-num_clusters = 32
+num_traces = 10000
+num_clusters = 64
 
 env = gym.make(environment, )
 traces_file_name = f'{environment}_{agent_names}_{num_traces}_traces'
@@ -178,7 +181,7 @@ alergia_traces = compute_clustering_function_and_map_to_traces(all_data,
 # mdp_a2c = run_Alergia(alergia_traces[1],eps=0.05, automaton_type='mdp', print_info=True)
 all_traces = alergia_traces[0]
 all_traces.extend(alergia_traces[1])
-mdp_a2c = run_Alergia(all_traces,eps=0.005, automaton_type='mdp', print_info=True)
+mdp_a2c = run_Alergia(all_traces,eps=0.0005, automaton_type='mdp', print_info=True)
 
 # mdp_dqn.save(f'mdp_dqn_{num_clusters}')
 # mdp_a2c.save(f'mdp_a2c_{num_clusters}')
