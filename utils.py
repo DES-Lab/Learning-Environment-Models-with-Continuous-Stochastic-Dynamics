@@ -49,8 +49,11 @@ def load(load_path):
 
 def save_samples_to_file(samples, filename='jAlergiaData.txt'):
     with open(filename, 'w') as f:
-        for seq in samples:
-            f.write(','.join([str(s) for s in seq]) + '\n')
+        for sample in samples:
+            s = f'{str(sample[0])},'
+            for i, o in sample[1:]:
+                s += f'{str(i)},{str(o)},'
+            f.write(s[:-1] + '\n')
 
 
 def delete_file(filename):

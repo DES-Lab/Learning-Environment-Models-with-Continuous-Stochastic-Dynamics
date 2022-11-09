@@ -14,43 +14,46 @@ dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', D
 env = gym.make("LunarLander-v2")
 
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
-input_map = {v:k for k, v in action_map.items()}
+input_map = {v: k for k, v in action_map.items()}
 
 import aalpy.paths
+
 aalpy.paths.path_to_prism = 'C:/Program Files/prism-4.6/bin/prism.bat'
 
+
 def get_q_value(obs, model):
-    with torch.no_grad():
-        observation = obs.reshape((-1,) + model.observation_space.shape)
-        observation = obs_as_tensor(observation, 'cpu')
+    observation = obs.reshape((-1,) + model.observation_space.shape)
+    # observation = obs_as_tensor(observation, 'cpu')
+    observation = torch.tensor(observation)
     return int(max(model.q_net(observation)[0].tolist()))
 
 
 alergia_samples = []
-for _ in range(1000):
-    obs = env.reset()
-    sample = ['INIT']
-    while True:
-        action, state = dqn_agent.predict(obs)
+with torch.no_grad():
+    for _ in range(10000):
+        obs = env.reset()
+        sample = ['INIT']
+        while True:
+            action, state = dqn_agent.predict(obs)
 
-        obs, reward, done, _ = env.step(action)
-        q_value = get_q_value(obs, dqn_agent)
-        if q_value < 0:
-            q_value = 'NEGATIVE'
-        output = f'c{q_value}'
-        if done and reward == 100:
-            output = 'GOAL'
-        sample.append((action_map[int(action)], output))
-        if done:
-            break
-    alergia_samples.append(sample)
+            obs, reward, done, _ = env.step(action)
+            q_value = get_q_value(obs, dqn_agent)
+            if q_value < 0:
+                q_value = 'NEGATIVE'
+            output = f'c{q_value}'
+            if done and reward == 100:
+                output = 'GOAL'
+            sample.append((action_map[int(action)], output))
+            if done:
+                break
+        alergia_samples.append(sample)
 
 jalergia_samples = 'rewardSample.txt'
 save_samples_to_file(alergia_samples, jalergia_samples)
 
 model = run_JAlergia('rewardSample.txt', 'mdp', 'alergia.jar', heap_memory='-Xmx4G', optimize_for='memory')
 model.save('reward_automaton')
-model = load_automaton_from_file('reward_automaton.dot','mdp')
+model = load_automaton_from_file('reward_automaton.dot', 'mdp')
 model.make_input_complete('sink_state')
 
 delete_file(jalergia_samples)
