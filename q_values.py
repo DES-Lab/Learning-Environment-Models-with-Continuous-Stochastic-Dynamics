@@ -1,12 +1,14 @@
 import random
-
+import torch
 import gym
-from aalpy.learning_algs import run_Alergia
+from aalpy.learning_algs import run_Alergia, run_JAlergia
+from aalpy.utils import load_automaton_from_file
 from stable_baselines3 import DQN
 from stable_baselines3.common.utils import obs_as_tensor
 
 from agents import load_agent
 from prism_scheduler import PrismInterface
+from utils import save_samples_to_file, delete_file
 
 dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 env = gym.make("LunarLander-v2")
@@ -18,9 +20,10 @@ import aalpy.paths
 aalpy.paths.path_to_prism = 'C:/Program Files/prism-4.6/bin/prism.bat'
 
 def get_q_value(obs, model):
-    observation = obs.reshape((-1,) + model.observation_space.shape)
-    observation = obs_as_tensor(observation, 'cpu')
-    return int(max(model.q_net(observation)[0].tolist())) % 20
+    with torch.no_grad():
+        observation = obs.reshape((-1,) + model.observation_space.shape)
+        observation = obs_as_tensor(observation, 'cpu')
+    return int(max(model.q_net(observation)[0].tolist()))
 
 
 alergia_samples = []
@@ -32,6 +35,8 @@ for _ in range(1000):
 
         obs, reward, done, _ = env.step(action)
         q_value = get_q_value(obs, dqn_agent)
+        if q_value < 0:
+            q_value = 'NEGATIVE'
         output = f'c{q_value}'
         if done and reward == 100:
             output = 'GOAL'
@@ -40,14 +45,20 @@ for _ in range(1000):
             break
     alergia_samples.append(sample)
 
-model = run_Alergia(alergia_samples, 'mdp', print_info=True)
-model.save('reward_automaton')
+jalergia_samples = 'rewardSample.txt'
+save_samples_to_file(alergia_samples, jalergia_samples)
 
-prism_interface = PrismInterface(["GOAL"], model)
+model = run_JAlergia('rewardSample.txt', 'mdp', 'alergia.jar', heap_memory='-Xmx4G', optimize_for='memory')
+model.save('reward_automaton')
+model = load_automaton_from_file('reward_automaton.dot','mdp')
+model.make_input_complete('sink_state')
+
+delete_file(jalergia_samples)
+
+prism_interface = PrismInterface('GOAL', model)
 
 for _ in range(1000):
     obs = env.reset()
-
     prism_interface.reset()
 
     reward = 0
@@ -61,13 +72,14 @@ for _ in range(1000):
         reward += rew
 
         q_value = get_q_value(obs, dqn_agent)
-        output = f'c{q_value}' if not done and reward == 100 else 'GOAL'
+        if q_value < 0:
+            q_value = 'NEGATIVE'
+        output = f'c{q_value}'
+        if done and reward == 100:
+            output = 'GOAL'
         reached_state = prism_interface.step_to(action, output)
         env.render()
         if not reached_state:
-            # done = True
-            # reward = -1000
-            #print('Run into state that is unreachable in the model.')
             possible_outs = prism_interface.poss_step_to(action)
             prism_interface.step_to(action, random.choice(possible_outs))
         if done:

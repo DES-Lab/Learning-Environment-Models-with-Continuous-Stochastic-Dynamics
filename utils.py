@@ -46,6 +46,18 @@ def load(load_path):
     else:
         return None
 
+
+def save_samples_to_file(samples, filename='jAlergiaData.txt'):
+    with open(filename, 'w') as f:
+        for seq in samples:
+            f.write(','.join([str(s) for s in seq]) + '\n')
+
+
+def delete_file(filename):
+    import os
+    if os.path.exists(filename):
+        os.remove(filename)
+
 # def old_stuff():
 # num_episodes = 10000
 # num_clusters = 32
