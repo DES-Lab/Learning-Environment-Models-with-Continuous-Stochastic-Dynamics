@@ -28,35 +28,41 @@ def get_q_value(obs, model):
     return int(max(model.q_net(observation)[0].tolist()))
 
 
-alergia_samples = []
-with torch.no_grad():
-    for _ in range(10000):
-        obs = env.reset()
-        sample = ['INIT']
-        while True:
-            action, state = dqn_agent.predict(obs)
+skip_sampling_and_model_computation = True
+if not skip_sampling_and_model_computation:
+    alergia_samples = []
+    sample_num = 0
+    with torch.no_grad():
+        for _ in range(10000):
+            sample_num += 1
+            if sample_num % 100 == 0:
+                print(sample_num)
+            obs = env.reset()
+            sample = ['INIT']
+            while True:
+                action, state = dqn_agent.predict(obs)
 
-            obs, reward, done, _ = env.step(action)
-            q_value = get_q_value(obs, dqn_agent)
-            if q_value < 0:
-                q_value = 'NEGATIVE'
-            output = f'c{q_value}'
-            if done and reward == 100:
-                output = 'GOAL'
-            sample.append((action_map[int(action)], output))
-            if done:
-                break
-        alergia_samples.append(sample)
+                obs, reward, done, _ = env.step(action)
+                q_value = get_q_value(obs, dqn_agent)
+                if q_value < 0:
+                    q_value = 'NEGATIVE'
+                output = f'c{q_value}'
+                if done and reward == 100:
+                    output = 'GOAL'
+                sample.append((action_map[int(action)], output))
+                if done:
+                    break
+            alergia_samples.append(sample)
 
-jalergia_samples = 'rewardSample.txt'
-save_samples_to_file(alergia_samples, jalergia_samples)
+    jalergia_samples = 'rewardSample.txt'
+    save_samples_to_file(alergia_samples, jalergia_samples)
 
-model = run_JAlergia('rewardSample.txt', 'mdp', 'alergia.jar', heap_memory='-Xmx4G', optimize_for='memory')
-model.save('reward_automaton')
-model = load_automaton_from_file('reward_automaton.dot', 'mdp')
-model.make_input_complete('sink_state')
-
-delete_file(jalergia_samples)
+    model = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx4G', optimize_for='memory')
+    model.save('reward_automaton')
+    delete_file(jalergia_samples)
+else:
+    model = load_automaton_from_file('reward_automaton.dot', 'mdp')
+    model.make_input_complete('sink_state')
 
 prism_interface = PrismInterface('GOAL', model)
 
@@ -83,8 +89,8 @@ for _ in range(1000):
         reached_state = prism_interface.step_to(action, output)
         env.render()
         if not reached_state:
-            possible_outs = prism_interface.poss_step_to(action)
-            prism_interface.step_to(action, random.choice(possible_outs))
+            possible_actions = prism_interface.get_available_actions()
+            prism_interface.step_to(action, random.choice(possible_actions))
         if done:
             print(env.game_over)
             if not env.game_over:

@@ -2,13 +2,13 @@ import pickle
 
 import gym
 import numpy as np
-from aalpy.learning_algs import run_Alergia
+from aalpy.learning_algs import run_Alergia, run_JAlergia
 from aalpy.utils import statistical_model_checking
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
 from agents import get_lunar_lander_agents
-from utils import load, save
+from utils import load, save, delete_file, save_samples_to_file
 
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 
@@ -130,6 +130,13 @@ def compute_stochastic_model(traces, clustering_fun, include_reward_in_output=Fa
             episode_trace.append((action_map[int(action)], output if not done else 'DONE'))  # action_map[int(action)]
 
         alergia_traces.append(episode_trace)
+
+    # jalergia_samples = 'alergiaSamples.txt'
+    # save_samples_to_file(alergia_traces, jalergia_samples)
+    #
+    # model = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx4G', optimize_for='memory')
+    # model.save('reward_automaton')
+    # delete_file(jalergia_samples)
 
     model = run_Alergia(alergia_traces, automaton_type='mdp', print_info=True)
     model.make_input_complete()

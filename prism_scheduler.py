@@ -76,6 +76,10 @@ class PrismInterface:
 
         return reached_state
 
+    def get_available_actions(self):
+        trans_from_current = self.parser.transition_dict[self.current_state]
+        return list(set([action for prob, action, target_state in trans_from_current]))
+
     def call_prism(self):
         import subprocess
         from os import path
