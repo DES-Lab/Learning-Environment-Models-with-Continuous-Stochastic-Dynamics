@@ -8,6 +8,7 @@ import gym
 import torch
 from stable_baselines3 import DQN
 from torch import nn, optim
+from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 
 from agents import load_agent
@@ -36,8 +37,27 @@ def get_observation_action_pairs(num_ep=10000):
     return observation_actions_pairs
 
 
+def evaluate_on_environment(env, model, num_episodes=100, render=False):
+    all_rewards = []
+    for _ in range(num_episodes):
+        obs = env.reset()
+        ep_rew = 0
+        while True:
+            t = torch.tensor(obs, device=device)
+            a = model(t)
+            action = torch.argmax(a).data.item()
+            obs, rew, done, info = env.step(action)
+            if render:
+                env.render()
+            ep_rew += rew
+            if done:
+                all_rewards.append(ep_rew)
+                break
+    print('Mean reward:', mean(all_rewards))
+
+
 class HoeffdingClustering():
-    def __init__(self, nn, alpha=0.05):
+    def __init__(self, nn, alpha=0.005):
         self.nn = nn
         self.alpha = alpha
         self.clusters = defaultdict(list)
@@ -55,26 +75,32 @@ class HoeffdingClustering():
 
     def compute_clusters(self, observations):
         predictions = self.nn(observations)
-        prediction_probabilities = self.nn.softmax(predictions).tolist()
+        prediction_probabilities = self.nn.softmax(predictions)
 
         num_of_clusters = 1
         if not self.clusters:
             self.clusters[f'c{num_of_clusters}'].append(0)
 
         for i in range(len(prediction_probabilities)):
-            probability_distribution = prediction_probabilities[i]
+            current_observation = prediction_probabilities[i].data.tolist()
             cluster_found = False
-            for cluster_label, values in self.clusters.items():
-                cluster_probability_dist = [prediction_probabilities[index] for index in values]
-                # TODO ADD OPTION TO CONSIDER WHOLE CLUSTER
-                if not self.are_different(probability_distribution, cluster_probability_dist[0]):
+            for cluster_label, cluster_element_indices in self.clusters.items():
+                # OPTION TO CONSIDER WHOLE CLUSTER
+                cluster_incompatible = False
+                for index in cluster_element_indices:
+                    cluster_element = prediction_probabilities[index].data.tolist()
+                    if self.are_different(current_observation, cluster_element):
+                        cluster_incompatible = True
+                        break
+                if not cluster_incompatible:
                     self.clusters[cluster_label].append(i)
                     cluster_found = True
-                # TODO ADD OPTION TO COMPUTE AMBIGUITY
-                if cluster_found:
                     break
+
             if not cluster_found:
+                print(num_of_clusters)
                 num_of_clusters += 1
+                print(num_of_clusters)
                 self.clusters[f'c{num_of_clusters}'].append(i)
 
         print('Number of clusters', num_of_clusters)
@@ -89,7 +115,7 @@ class ObservationActionsDataset(Dataset):
 
     def __getitem__(self, index):
         obs, action = self.observations_action_pairs[index]
-        return torch.tensor(obs, device=device), torch.tensor(action, device=device)
+        return torch.tensor(obs, device=device), torch.LongTensor([action.item()], device=device)
 
 
 class NeuralNetwork(nn.Module):
@@ -101,15 +127,19 @@ class NeuralNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_space_dimension, hidden_space_dimension // 2),
             nn.ReLU(),
+            nn.Linear(hidden_space_dimension // 2, hidden_space_dimension // 2),
+            nn.ReLU(),
             nn.Linear(hidden_space_dimension // 2, output_dimension),
+            # nn.ReLU(),
+            # nn.Linear(hidden_space_dimension // 4, output_dimension),
         ).to(device)
 
     def forward(self, x):
         return self.linear_relu_stack(x)
         # return self.softmax(self.get_prediction_probabilities(x))
 
-    def get_prediction_probabilities(self, x):
-        return self.softmax(x)
+    #def get_prediction_probabilities(self, x):
+        #return self.softmax(x)
 
 
 def train_nn(nn, optim, loss_criterion, train_data, test_data, num_epochs=100, stopping_accuracy=0.99):
@@ -125,6 +155,7 @@ def train_nn(nn, optim, loss_criterion, train_data, test_data, num_epochs=100, s
 
             # forward + backward + optimize
             outputs = nn(inputs)
+            labels = labels.squeeze_() # TODO https://paperswithcode.com/task/imitation-learning
             loss = loss_criterion(outputs, labels)
             loss.backward()
             optim.step()
@@ -138,6 +169,8 @@ def train_nn(nn, optim, loss_criterion, train_data, test_data, num_epochs=100, s
             for test_inputs, test_labels in test_data:
                 output = nn(test_inputs)
                 _, predictions = output.max(1)
+                test_labels = test_labels.squeeze_() # TODO CHECK THIS SQUEEZING
+
                 correct += predictions.eq(test_labels).sum().item()
                 total += predictions.size(0)
 
@@ -154,7 +187,7 @@ env = gym.make("LunarLander-v2")
 num_episodes = 1000
 load_observations = True
 load_nn_if_exists = True
-hidden_size = 128  # second layer is hidden_size /2
+hidden_size = 256  # second layer is hidden_size /2
 
 if load_observations and os.path.exists(f'obs_actions_pairs_{num_episodes}.pickle'):
     obs_action_pairs = load(f'obs_actions_pairs_{num_episodes}.pickle')
@@ -172,28 +205,28 @@ split_index = int(len_dataset * training_ratio)
 training_data = ObservationActionsDataset(obs_action_pairs[:split_index])
 test_data = ObservationActionsDataset(obs_action_pairs[split_index:])
 
-train_data_loader = DataLoader(training_data, batch_size=64, shuffle=True)
-test_data_loader = DataLoader(test_data, batch_size=64, shuffle=True)
+train_data_loader = DataLoader(training_data, batch_size=128, shuffle=True)
+test_data_loader = DataLoader(test_data, batch_size=128, shuffle=True)
 
 neural_network = NeuralNetwork(input_dimension=8, hidden_space_dimension=hidden_size, output_dimension=4)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.Adam(neural_network.parameters(), lr=0.001)
+optimizer = optim.Adam(neural_network.parameters(), lr=0.01, )
 
 model_path = f'nn_{hidden_size}.pt'
 if not load_nn_if_exists or not os.path.exists(model_path):
-    train_nn(neural_network, optimizer, criterion, train_data_loader, test_data_loader, stopping_accuracy=0.98)
+    train_nn(neural_network, optimizer, criterion, train_data_loader, test_data_loader, num_epochs=10, stopping_accuracy=0.98)
     torch.save(neural_network.state_dict(), model_path)
     print(f'Weights saved to {model_path}.')
 else:
-    model = torch.load(model_path)
+    neural_network.load_state_dict(torch.load(model_path))
     print('NN weights loaded.')
 
 neural_network.eval()
+
+evaluate_on_environment(env, neural_network, render=False)
 
 hoeffding_clustering = HoeffdingClustering(neural_network)
 observations = torch.stack([d[0] for d in train_data_loader.dataset])
 
 hoeffding_clustering.compute_clusters(observations)
-
-
