@@ -6,6 +6,7 @@ from aalpy.learning_algs import run_Alergia, run_JAlergia
 from aalpy.utils import statistical_model_checking
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
+import random
 
 from agents import get_lunar_lander_agents
 from utils import load, save, delete_file, save_samples_to_file
@@ -13,13 +14,19 @@ from utils import load, save, delete_file, save_samples_to_file
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 
 
-def get_traces_from_policy(agent, env, num_episodes):
+def get_traces_from_policy(agent, env, num_episodes, randomness_probs=[0]):
     traces = []
+    rand_i = 0
     for _ in range(num_episodes):
+        curr_randomness = randomness_probs[rand_i]
+        rand_i = (rand_i + 1) % len(randomness_probs)
         observation = env.reset()
         episode_trace = []
         while True:
-            action, _ = agent.predict(observation)
+            if random.random() < curr_randomness:
+                action = random.randint(0,len(action_map)-1)
+            else:
+                action, _ = agent.predict(observation)
             observation, reward, done, info = env.step(action)
             episode_trace.append((observation.reshape(1, -1), action, reward, done))
             if done:
@@ -84,7 +91,6 @@ def compute_clustering_function_and_map_to_traces(all_policy_traces, n_clusters=
     cluster_labels = list(clustering_function.labels_)
     print('Cluster labels computed')
 
-    del observation_space
     alergia_datasets = []
 
     label_i = 0
@@ -156,7 +162,7 @@ if environment == 'LunarLander-v2':
 assert agents
 print('Agents loaded')
 
-num_traces = 10000
+num_traces = 8000
 num_clusters = 64
 
 env = gym.make(environment, )
@@ -170,7 +176,7 @@ else:
     print(f'Obtaining {num_traces} per agent')
     all_data = []
     for agent in agents:
-        all_data.append(get_traces_from_policy(agent, env, num_traces))
+        all_data.append(get_traces_from_policy(agent, env, num_traces,randomness_probs=[0,0.01,0.025,0.05]))
     save(all_data, traces_file_name)
 
 # clustering_function, pca = compute_clustering_function(all_data, n_clusters=num_clusters, reduce_dimensions=False)
@@ -187,9 +193,14 @@ alergia_traces = compute_clustering_function_and_map_to_traces(all_data,
 # mdp_dqn = run_Alergia(alergia_traces[0],eps=0.05, automaton_type='mdp', print_info=True)
 # mdp_a2c = run_Alergia(alergia_traces[1],eps=0.05, automaton_type='mdp', print_info=True)
 all_traces = alergia_traces[0]
-all_traces.extend(alergia_traces[1])
-mdp_a2c = run_Alergia(all_traces,eps=0.0005, automaton_type='mdp', print_info=True)
+for i in range(1,len(alergia_traces)):
+# all_traces = alergia_traces[0]
+    all_traces.extend(alergia_traces[i])
+# mdp = run_Alergia(all_traces,eps=0.0005, automaton_type='mdp', print_info=True)
+jalergia_samples = 'alergiaSamples.txt'
+save_samples_to_file(all_traces, jalergia_samples)
 
-# mdp_dqn.save(f'mdp_dqn_{num_clusters}')
-# mdp_a2c.save(f'mdp_a2c_{num_clusters}')
-mdp_a2c.save(f'mdp_combined_scale_{scale}_{num_clusters}_{num_traces}')
+mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx4G', optimize_for='memory', eps=0.00005)
+delete_file(jalergia_samples)
+
+mdp.save(f'mdp_combined_scale_{scale}_{num_clusters}_{num_traces}')
