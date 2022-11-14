@@ -8,7 +8,7 @@ from stable_baselines3 import DQN
 
 from abstraction import compute_clustering_function_and_map_to_traces
 from agents import load_agent
-from utils import get_traces_from_policy, save_samples_to_file, delete_file
+from utils import get_traces_from_policy, save_samples_to_file, delete_file, compress_trace
 
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 
@@ -27,6 +27,9 @@ def compute_assemble_mdp(alergia_traces,
     assemble_mdps = dict()
 
     for trace in alergia_traces:
+        ol = len(trace)
+        if skip_sequential_clusers:
+            trace = compress_trace(trace)
         trace_suffixes = get_trace_suffixes(trace)
         for suffix in trace_suffixes[:-1]:
             cluster_label = suffix[0][1]
@@ -75,6 +78,6 @@ if __name__ == '__main__':
     traces = [get_traces_from_policy(dqn_agent, env, 10, action_map)]
     alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, n_clusters=32, scale=True, )[0]
 
-    compute_assemble_mdp(alergia_traces)
+    compute_assemble_mdp(alergia_traces, skip_sequential_clusers=True)
 
     # assemble_mdp = load_assemble('assemble')

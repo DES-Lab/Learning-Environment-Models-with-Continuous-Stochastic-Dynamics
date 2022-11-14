@@ -63,6 +63,11 @@ def delete_file(filename):
         os.remove(filename)
 
 
+def compress_trace(x):
+    from itertools import groupby
+    return [key for key, _group in groupby(x)]
+
+
 def get_traces_from_policy(agent, env, num_episodes, action_map, randomness_probs=(0,)):
     traces = []
     rand_i = 0
