@@ -20,7 +20,7 @@ assert agents
 print('Agents loaded')
 
 num_traces = 8000
-num_clusters = 64
+num_clusters = 32
 scale = True
 
 env = gym.make(environment, )

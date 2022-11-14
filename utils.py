@@ -42,8 +42,9 @@ def save(x, path):
 
 
 def load(file_name):
-    if os.path.exists(f'pickle_files/{file_name}'):
-        with open(file_name, 'rb') as handle:
+    full_file_name = f'pickle_files/{file_name}.pickle'
+    if os.path.exists(full_file_name):
+        with open(full_file_name, 'rb') as handle:
             return pickle.load(handle)
     else:
         return None

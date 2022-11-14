@@ -4,14 +4,62 @@ from pathlib import Path
 import aalpy.paths
 from aalpy.utils import mdp_2_prism_format
 
+class Scheduler:
+    def __init__(self, initial_state, transition_dict, label_dict, scheduler_dict):
+        self.scheduler_dict = scheduler_dict
+        self.initial_state = initial_state
+        self.transition_dict = transition_dict
+        self.label_dict = label_dict
+        self.current_state = None
+
+
+    def get_input(self):
+        if self.current_state is None:
+            # print("Return none because current state is none")
+            return None
+        else:
+            # print("Current state is not none")
+            if self.current_state not in self.scheduler_dict:
+                return None
+            return self.scheduler_dict[self.current_state]
+
+    def reset(self):
+        self.current_state = self.initial_state
+
+    def poss_step_to(self, input):
+        output_labels = []
+        trans_from_current = self.transition_dict[self.current_state]
+        found_state = False
+        for (prob, action, target_state) in trans_from_current:
+            if action == input:
+                output_labels.extend(self.label_dict[target_state])
+        return output_labels
+
+    def step_to(self, input, output):
+        reached_state = None
+        trans_from_current = self.transition_dict[self.current_state]
+        found_state = False
+        for (prob, action, target_state) in trans_from_current:
+            if action == input and output in self.label_dict[target_state]:
+                reached_state = self.current_state = target_state
+                found_state = True
+                break
+        if not found_state:
+            reached_state = None
+
+        return reached_state
+
+    def get_available_actions(self):
+        trans_from_current = self.transition_dict[self.current_state]
+        return list(set([action for prob, action, target_state in trans_from_current]))
 
 class PrismInterface:
-    def __init__(self, destination, model, num_steps=None):
+    def __init__(self, destination, model, num_steps=None, maximize = True):
         self.tmp_dir = Path("tmp_prism")
         self.destination = destination
         self.model = model
         self.num_steps = num_steps
-
+        self.maximize = maximize
         if type(destination) != list:
             destination = destination
         destination = "_or_".join(destination)
@@ -28,6 +76,8 @@ class PrismInterface:
         self.call_prism()
         self.parser = PrismSchedulerParser(self.adv_file_name, self.concrete_model_name + ".lab",
                                            self.concrete_model_name + ".tra")
+        self.scheduler = Scheduler(self.parser.initial_state, self.parser.transition_dict,
+                                   self.parser.label_dict, self.parser.scheduler_dict)
 
     def create_mc_query(self):
         if type(self.destination) != list:
@@ -35,50 +85,11 @@ class PrismInterface:
         else:
             destination = self.destination
         destination = "|".join(map(lambda d : f"\"{d}\"",destination))
-
-        prop = f"Pmax=?[F {destination}]" if not self.num_steps else \
-            f'Pmax=?[F<{self.num_steps} {destination}]'
+        opt_string = "Pmax" if self.maximize else "Pmin"
+        prop = f"{opt_string}=?[F {destination}]" if not self.num_steps else \
+            f'{opt_string}=?[F<{self.num_steps} {destination}]'
         return prop
 
-    def get_input(self):
-        if self.current_state is None:
-            # print("Return none because current state is none")
-            return None
-        else:
-            # print("Current state is not none")
-            if self.current_state not in self.parser.scheduler_dict:
-                return None
-            return self.parser.scheduler_dict[self.current_state]
-
-    def reset(self):
-        self.current_state = self.parser.initial_state
-
-    def poss_step_to(self, input):
-        output_labels = []
-        trans_from_current = self.parser.transition_dict[self.current_state]
-        found_state = False
-        for (prob, action, target_state) in trans_from_current:
-            if action == input:
-                output_labels.extend(self.parser.label_dict[target_state])
-        return output_labels
-
-    def step_to(self, input, output):
-        reached_state = None
-        trans_from_current = self.parser.transition_dict[self.current_state]
-        found_state = False
-        for (prob, action, target_state) in trans_from_current:
-            if action == input and output in self.parser.label_dict[target_state]:
-                reached_state = self.current_state = target_state
-                found_state = True
-                break
-        if not found_state:
-            reached_state = None
-
-        return reached_state
-
-    def get_available_actions(self):
-        trans_from_current = self.parser.transition_dict[self.current_state]
-        return list(set([action for prob, action, target_state in trans_from_current]))
 
     def call_prism(self):
         import subprocess

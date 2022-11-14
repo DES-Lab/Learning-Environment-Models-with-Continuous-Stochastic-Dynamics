@@ -25,7 +25,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
 
     scaler = StandardScaler()
     scaler.fit(observation_space)
-    save(scaler, 'standard_scaler_{num_traces}')
+    save(scaler, f'standard_scaler_{num_traces}')
 
     if reduce_dimensions:
         pca = PCA(n_components=4)
@@ -59,7 +59,10 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                 if reward == 100 and done:
                     alergia_sample.append(
                         (action_map[int(action)], f"succ__{cluster_label}"))
-                if reward >= 1 and done:
+                elif reward == -100 and done:
+                    alergia_sample.append(
+                        (action_map[int(action)], f"bad__{cluster_label}"))
+                elif reward >= 1 and done:
                     alergia_sample.append(
                         (action_map[int(action)], f"pos__{cluster_label}"))
                 else:

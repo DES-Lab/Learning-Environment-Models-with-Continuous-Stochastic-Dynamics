@@ -7,7 +7,7 @@ from sklearn.metrics import euclidean_distances
 
 from utils import load
 
-num_traces = 8000
+num_traces = 10000
 num_clusters = 64
 scale = True
 environment = 'LunarLander-v2'
@@ -46,7 +46,7 @@ def take_best_out(prism_interface, scaler, clustering, concrete_obs, action,
                 if min_dist is None or distance < min_dist:
                     min_dist = distance
                     min_l = o
-    prism_interface.step_to(action, min_l)
+    prism_interface.scheduler.step_to(action, min_l)
 
 
 for _ in range(1000):
@@ -57,11 +57,11 @@ for _ in range(1000):
         conc_obs = scaler.transform(conc_obs)
     obs = f'c{clustering_function.predict(conc_obs)[0]}'
 
-    prism_interface.reset()
+    prism_interface.scheduler.reset()
     # prism_interface.step_to('right_engine', obs)
     reward = 0
     while True:
-        action = prism_interface.get_input()
+        action = prism_interface.scheduler.get_input()
         if action is None:
             print('Cannot schedule an action')
             break
@@ -74,13 +74,13 @@ for _ in range(1000):
         if scale:
             conc_obs = scaler.transform(conc_obs)
         obs = f'c{clustering_function.predict(conc_obs)[0]}'
-        reached_state = prism_interface.step_to(action, obs)
+        reached_state = prism_interface.scheduler.step_to(action, obs)
         # env.render()
         if not reached_state:
             # done = True
             # reward = -1000
             # print('Run into state that is unreachable in the model.')
-            possible_outs = prism_interface.poss_step_to(action)
+            possible_outs = prism_interface.scheduler.poss_step_to(action)
             take_best_out(prism_interface, scaler, clustering_function, conc_obs, action,
                           possible_outs, scale)
         if done:
