@@ -26,15 +26,13 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
 
     scaler = StandardScaler()
     scaler.fit(observation_space)
-    with open(f'standard_scaler_{num_traces}.pickle', 'wb') as handle:
-        pickle.dump(scaler, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    save(scaler, 'standard_scaler_{num_traces}')
 
     if reduce_dimensions:
         pca = PCA(n_components=4)
         observation_space = pca.fit_transform(observation_space)
 
-        with open(f'pca_4.pickle', 'wb') as handle:
-            pickle.dump(pca, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        save(pca, 'pca_4')
         print('Dimensions reduced with PCA')
 
     if scale:
