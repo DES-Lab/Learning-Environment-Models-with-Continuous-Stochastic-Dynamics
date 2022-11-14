@@ -21,6 +21,7 @@ print('Agents loaded')
 
 num_traces = 8000
 num_clusters = 64
+scale = True
 
 env = gym.make(environment, )
 traces_file_name = f'{environment}_{agent_names}_{num_traces}_traces'
@@ -37,18 +38,11 @@ else:
             get_traces_from_policy(agent, env, num_traces, action_map, randomness_probs=[0, 0.01, 0.025, 0.05]))
     save(all_data, traces_file_name)
 
-# clustering_function, pca = compute_clustering_function(all_data, n_clusters=num_clusters, reduce_dimensions=False)
-# compute_clustering_function_and_map_to_traces(all_data, num_clusters, reduce_dimensions=False)
-# exit()
-# print('Clustering function computed')
-
-scale = True
 alergia_traces = compute_clustering_function_and_map_to_traces(all_data,
                                                                action_map,
                                                                num_clusters,
                                                                scale=scale,
                                                                reduce_dimensions=False)
-
 all_traces = alergia_traces[0]
 for i in range(1, len(alergia_traces)):
     all_traces.extend(alergia_traces[i])
