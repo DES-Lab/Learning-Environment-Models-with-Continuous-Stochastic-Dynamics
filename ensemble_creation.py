@@ -19,12 +19,12 @@ def get_trace_suffixes(trace):
 
 
 # returns a dictionary where key is cluster label and value is corresponding mdp
-def compute_assemble_mdp(alergia_traces,
+def compute_ensemble_mdp(alergia_traces,
                          optimize_for='accuracy', alergia_eps=0.005,
                          input_completeness='sink_state', skip_sequential_outputs=False,
-                         save_path_prefix='assemble'):
+                         save_path_prefix='ensemble'):
     cluster_traces = defaultdict(list)
-    assemble_mdps = dict()
+    ensemble_mdps = dict()
 
     for trace in alergia_traces:
         if skip_sequential_outputs:
@@ -43,40 +43,40 @@ def compute_assemble_mdp(alergia_traces,
         delete_file(cluster_samples)
         if input_completeness:
             mdp.make_input_complete(input_completeness)
-        assemble_mdps[cluster_label] = mdp
+        ensemble_mdps[cluster_label] = mdp
 
         # save cluster mdp to file
         if save_path_prefix:
             mdp.save(f'learned_models/{save_path_prefix}_{cluster_label}')
 
-    return assemble_mdps
+    return ensemble_mdps
 
 
-def load_assemble(saved_path_prefix='assemble', input_completeness='sink_state'):
-    assemble_files = []
-    assemble_maps = dict()
+def load_ensemble(saved_path_prefix='ensemble', input_completeness='sink_state'):
+    ensemble_files = []
+    ensemble_maps = dict()
     for file in os.listdir('learned_models'):
         if file.startswith(saved_path_prefix):
-            assemble_files.append(file)
-    for f in assemble_files:
+            ensemble_files.append(file)
+    for f in ensemble_files:
         mdp = load_automaton_from_file(f'learned_models/{f}', 'mdp')
         if not mdp.is_input_complete() and input_completeness is not None:
             mdp.make_input_complete(input_completeness)
         cluster_label = f[len(saved_path_prefix) + 1:][:-4]
         print(cluster_label)
-        assemble_maps[cluster_label] = mdp
+        ensemble_maps[cluster_label] = mdp
 
-    print('Assemble MDPs loaded.')
-    return assemble_maps
+    print('Ensemble MDPs loaded.')
+    return ensemble_maps
 
 
 if __name__ == '__main__':
     env = gym.make("LunarLander-v2")
     dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 
-    traces = [get_traces_from_policy(dqn_agent, env, 10, action_map)]
+    traces = [get_traces_from_policy(dqn_agent, env, 10000, action_map)]
     alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, n_clusters=32, scale=True, )[0]
 
-    compute_assemble_mdp(alergia_traces,)
+    compute_ensemble_mdp(alergia_traces, )
 
-    # assemble_mdp = load_assemble('assemble')
+    # ensemble_mdp = load_ensemble('ensemble')
