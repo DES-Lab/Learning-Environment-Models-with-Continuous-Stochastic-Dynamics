@@ -1,4 +1,4 @@
-import pickle
+from tqdm import tqdm
 
 import numpy as np
 from sklearn.cluster import KMeans
@@ -14,7 +14,6 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                                                   scale=False,
                                                   reduce_dimensions=False,
                                                   include_reward_in_output=False):
-
     observation_space = []
     for sampled_data in traces_obtained_from_all_agents:
         observation_space.extend([x[0] for trace in sampled_data for x in trace])
@@ -47,9 +46,10 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     alergia_datasets = []
 
     label_i = 0
+    print(f'Creating Alergia Samples. x {len(traces_obtained_from_all_agents)}')
     for policy_samples in traces_obtained_from_all_agents:
         dataset = []
-        for sample in policy_samples:
+        for sample in tqdm(policy_samples):
             alergia_sample = ['INIT']
             for _, action, reward, done in sample:
                 cluster_label = f'c{cluster_labels[label_i]}'

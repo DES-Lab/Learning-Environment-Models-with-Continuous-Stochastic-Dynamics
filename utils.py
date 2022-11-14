@@ -4,6 +4,7 @@ import random
 
 from aalpy.base import SUL
 from sklearn.cluster import KMeans
+from tqdm import tqdm
 
 
 class GymSUL(SUL):
@@ -71,7 +72,7 @@ def compress_trace(x):
 def get_traces_from_policy(agent, env, num_episodes, action_map, randomness_probs=(0,)):
     traces = []
     rand_i = 0
-    for _ in range(num_episodes):
+    for _ in tqdm(range(num_episodes)):
         curr_randomness = randomness_probs[rand_i]
         rand_i = (rand_i + 1) % len(randomness_probs)
         observation = env.reset()

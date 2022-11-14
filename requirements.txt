@@ -2,3 +2,4 @@ aalpy
 scikit-learn
 stable-baselines3[extra]
 huggingface_sb3
+tqdm

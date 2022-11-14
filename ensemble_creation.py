@@ -74,7 +74,7 @@ if __name__ == '__main__':
     env = gym.make("LunarLander-v2")
     dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 
-    traces = [get_traces_from_policy(dqn_agent, env, 10000, action_map)]
+    traces = [get_traces_from_policy(dqn_agent, env, 100, action_map)]
     alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, n_clusters=32, scale=True, )[0]
 
     compute_ensemble_mdp(alergia_traces, )
