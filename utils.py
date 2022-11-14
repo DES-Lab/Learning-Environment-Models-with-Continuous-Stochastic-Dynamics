@@ -1,5 +1,6 @@
 import os
 import pickle
+import random
 
 from aalpy.base import SUL
 from sklearn.cluster import KMeans
@@ -35,13 +36,13 @@ def compute_clusters(data, n_clusters):
 
 
 def save(x, path):
-    with open(f'{path}.pickle', 'wb') as handle:
+    with open(f'pickle_files/{path}.pickle', 'wb') as handle:
         pickle.dump(x, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
-def load(load_path):
-    if os.path.exists(load_path):
-        with open(load_path, 'rb') as handle:
+def load(file_name):
+    if os.path.exists(f'pickle_files/{file_name}'):
+        with open(file_name, 'rb') as handle:
             return pickle.load(handle)
     else:
         return None
@@ -61,53 +62,25 @@ def delete_file(filename):
     if os.path.exists(filename):
         os.remove(filename)
 
-# def old_stuff():
-# num_episodes = 10000
-# num_clusters = 32
-#
-# sampled_data = []
-#
-# # sample data
-# observation, info = env.reset()
-#
-# for _ in range(num_episodes):
-#     episode_trace = []
-#     observation, info = env.reset()
-#
-#     while True:
-#         action = env.action_space.sample()
-#         observation, reward, terminated, truncated, _ = env.step(action)
-#
-#         episode_trace.append((observation.reshape(1, -1), action, reward))
-#         if terminated or truncated:
-#             break
-#
-#     sampled_data.append(episode_trace)
-#
-# env.close()
-#
-# # cluster over observation space
-# observation_space = [x[0] for trace in sampled_data for x in trace]
-#
-# observation_space = np.array(observation_space)
-# print(observation_space.shape)
-# observation_space = np.squeeze(observation_space)
-# # num_samples, nx, ny = observation_space.shape
-# # observation_space = observation_space.reshape((num_samples, nx*ny))
-# # print(observation_space.shape)
-#
-# clustering_function = compute_clusters(observation_space, num_clusters)
-#
-# # print('CF computed')
-# # for i in observation_space[:10]:
-# #     print(clustering_function.predict(i.reshape(1, -1)))
-#
-# # active learning
-# alphabet = list(range(env.action_space.n))
-# sul = GymSUL(env, clustering_function)
-# eq_oracle = RandomWordEqOracle(alphabet, sul, min_walk_len=5, max_walk_len=30)
-#
-# model = run_stochastic_Lstar(alphabet, sul, eq_oracle, automaton_type='mdp', max_rounds=15)
-#
-# model.save()
-# model.visualize()
+
+def get_traces_from_policy(agent, env, num_episodes, action_map, randomness_probs=(0,)):
+    traces = []
+    rand_i = 0
+    for _ in range(num_episodes):
+        curr_randomness = randomness_probs[rand_i]
+        rand_i = (rand_i + 1) % len(randomness_probs)
+        observation = env.reset()
+        episode_trace = []
+        while True:
+            if random.random() < curr_randomness:
+                action = random.randint(0, len(action_map) - 1)
+            else:
+                action, _ = agent.predict(observation)
+            observation, reward, done, info = env.step(action)
+            episode_trace.append((observation.reshape(1, -1), action, reward, done))
+            if done:
+                break
+
+        traces.append(episode_trace)
+
+    return traces

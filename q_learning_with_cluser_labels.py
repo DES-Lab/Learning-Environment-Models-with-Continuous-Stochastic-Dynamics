@@ -7,7 +7,7 @@ from utils import load
 
 env = gym.make('LunarLander-v2')
 
-clustering_function = load('k_means_scale_True_64_6000.pickle')
+clustering_function = load('pickle_files/k_means_scale_True_64_6000.pickle')
 
 q_table = np.zeros([64, env.action_space.n])
 

@@ -339,8 +339,6 @@ def active_learning(env, model):
     model.visualize()
 
 
-
-
 env = gym.make("LunarLander-v2")
 
 num_episodes = 1000
@@ -387,8 +385,8 @@ neural_network.eval()
 # mdp = get_samples_and_model_for_alergia(env, neural_network, num_episodes=500, render=False)
 # mdp.save()
 
-#model = load_automaton_from_file('active_model.dot', 'smm')
-#model.visualize()
+# model = load_automaton_from_file('active_model.dot', 'smm')
+# model.visualize()
 active_learning(env, neural_network)
 
 #
