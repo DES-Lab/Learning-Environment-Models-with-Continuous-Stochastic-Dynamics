@@ -61,7 +61,7 @@ class PrismInterface:
         self.num_steps = num_steps
         self.maximize = maximize
         if type(destination) != list:
-            destination = destination
+            destination = [destination]
         destination = "_or_".join(destination)
         self.tmp_mdp_file = (self.tmp_dir / f"po_rl_{destination}.prism")
         # self.tmp_prop_file = f"{self.tmp_dir_name}/po_rl.props"
@@ -117,6 +117,7 @@ class PrismInterface:
         out = proc.communicate()[0]
         out = out.decode('utf-8').splitlines()
         for line in out:
+            #print(line)
             if not line:
                 continue
             if 'Syntax error' in line:
