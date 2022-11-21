@@ -1,10 +1,13 @@
+import random
+
+import sklearn
 from tqdm import tqdm
 
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans, MeanShift
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
-
+from sklearn.cluster import estimate_bandwidth
 from utils import save
 
 
@@ -13,16 +16,22 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                                                   n_clusters=16,
                                                   scale=False,
                                                   reduce_dimensions=False,
+                                                  clustering_type = "k_means",
+                                                  ms_samples = 10000,
+                                                  ms_bw_multiplier = 0.5,
                                                   include_reward_in_output=False):
     observation_space = []
     for sampled_data in traces_obtained_from_all_agents:
-        observation_space.extend([x[0] for trace in sampled_data for x in trace])
+        for trace in sampled_data:
+            for x in trace:
+                state = x[0]
+                observation_space.append(state[0])
+                # observation_space.extend([x[0][0:6] for trace in sampled_data for x in trace])
 
     num_traces = sum([len(x) for x in traces_obtained_from_all_agents])
 
     observation_space = np.array(observation_space)
     observation_space = np.squeeze(observation_space)
-
     scaler = StandardScaler()
     scaler.fit(observation_space)
     save(scaler, f'standard_scaler_{num_traces}')
@@ -37,10 +46,25 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     if scale:
         observation_space = scaler.transform(observation_space)
 
-    clustering_function = KMeans(n_clusters=n_clusters)
-    clustering_function.fit(observation_space)
-    save(clustering_function, f'k_means_scale_{scale}_{n_clusters}_{num_traces}')
-    cluster_labels = list(clustering_function.labels_)
+    clustering_function = None
+    cluster_labels = None
+    if clustering_type == "k_means":
+        clustering_function = KMeans(n_clusters=n_clusters)
+        clustering_function.fit(observation_space)
+        cluster_labels = list(clustering_function.labels_)
+    elif clustering_type == "mean_shift":
+        # reduced_obs_space_bw = random.choices(observation_space,k=20000)
+        reduced_obs_space = random.choices(observation_space,k=ms_samples)
+        print("About to estimate bw")
+        band_width = estimate_bandwidth(reduced_obs_space) * ms_bw_multiplier
+        print("Estimated bw")
+        clustering_function = MeanShift(bandwidth=band_width)
+        clustering_function.fit(reduced_obs_space)
+        print(f"Found {len(clustering_function.cluster_centers_)} clusters with mean shift")
+        cluster_labels = clustering_function.predict(observation_space)
+
+    save(clustering_function, f'{clustering_type}_scale_{scale}_{n_clusters}_{num_traces}')
+
     print('Cluster labels computed')
 
     alergia_datasets = []
@@ -58,11 +82,11 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                 # cluster_label += f'_{round(reward, 2)}'
                 if reward == 100 and done:
                     alergia_sample.append(
-                        (action_map[int(action)], f"succ__{cluster_label}"))
+                        (action_map[int(action)], f"succ__pos__{cluster_label}"))
                 elif reward == -100 and done:
                     alergia_sample.append(
                         (action_map[int(action)], f"bad__{cluster_label}"))
-                elif reward >= 1 and done:
+                elif reward >= 10 and done:
                     alergia_sample.append(
                         (action_map[int(action)], f"pos__{cluster_label}"))
                 else:
