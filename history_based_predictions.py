@@ -88,8 +88,8 @@ def evaluate(env, action_dict, clustering_function, scaler, history_window_size=
 env_name = "LunarLander-v2"
 
 num_traces = 1000
-scale = True
-n_clusters = 512
+scale = False
+n_clusters = 16
 history_size = 10
 
 env = gym.make(env_name)
@@ -107,6 +107,6 @@ alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_ma
 action_dict = compute_history_based_prediction(alergia_traces, max_history_len=history_size)
 
 cf = load(f'k_means_scale_{scale}_{n_clusters}_{num_traces}')
-scaler = load(f'standard_scaler_{num_traces}')
+scaler = load(f'standard_scaler_{num_traces}') if scale else None
 
 evaluate(env, action_dict, cf, scaler, history_window_size=history_size, strategy='probabilistic_longest')

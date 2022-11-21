@@ -82,7 +82,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                 # cluster_label += f'_{round(reward, 2)}'
                 if reward == 100 and done:
                     alergia_sample.append(
-                        (action_map[int(action)], f"succ__pos__{cluster_label}"))
+                        (action_map[int(action)], f"{cluster_label}__succ__pos"))
                 elif reward == -100 and done:
                     alergia_sample.append(
                         (action_map[int(action)], f"bad__{cluster_label}"))
