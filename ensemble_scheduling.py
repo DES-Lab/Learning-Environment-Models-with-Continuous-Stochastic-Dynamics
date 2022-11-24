@@ -22,22 +22,6 @@ def cluster_from_out(out):
 
 cluster_center_cache = dict()
 
-def find_closest_scheduler(conc_obs,clustering_function, schedulers):
-    min_dist = 1e30
-    min_l = None
-
-    for i, corr_center in enumerate(clustering_function.cluster_centers_):
-        if f"c{i}" not in schedulers.keys():
-            continue
-        if i not in cluster_center_cache:
-            cluster_center_cache[i] = clustering_function.predict(corr_center.reshape(1, -1))[0]
-        cluster = cluster_center_cache[i]
-        distance = euclidean_distances(conc_obs, corr_center.reshape(1, -1))
-        if min_dist is None or distance < min_dist:
-            min_dist = distance
-            min_l = f"c{i}"
-    return schedulers[min_l]
-
 def take_best_out(scheduler, clustering, concrete_obs, action, possible_outs):
     first_out = possible_outs[0]
     min_dist = 1e30
@@ -62,7 +46,7 @@ class EnsembleScheduler:
         self.target_label = target_label
         self.scheduler_ensemble = self.compute_schedulers(mdp_ensemble,target_label)
         self.active_schedulers = dict()
-        self.initial_lives = 1 # 1 works okay
+        self.initial_lives = 5 # 1 works okay
 
     def compute_schedulers(self,mdp_ensemble : Dict[str,Mdp], target_label) -> Dict[str,Scheduler]:
         schedulers = dict()
@@ -177,14 +161,14 @@ def run_episode(env, input_map, ensemble_scheduler, scale, scaler, clustering_fu
 
 
 num_clusters = 128
-num_traces = 1200
+num_traces = 3600
 scale = False
 clustering_type = "mean_shift"
 environment = 'LunarLander-v2'
 aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.7-linux64/bin/prism"
 target_label = "succ"
 
-mdp_ensemble = load_mdp_ensemble(environment,"ensemble_1_2k_meanshift", num_clusters,num_traces,scale)
+mdp_ensemble = load_mdp_ensemble(environment,"ensemble_3_6k_meanshift", num_clusters,num_traces,scale)
 ensemble_scheduler = EnsembleScheduler(mdp_ensemble,target_label)
 scaler = load(f'standard_scaler_{num_traces}')
 clustering_function = load(f'{clustering_type}_scale_{scale}_{num_clusters}_{num_traces}')

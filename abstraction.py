@@ -4,7 +4,7 @@ import sklearn
 from tqdm import tqdm
 
 import numpy as np
-from sklearn.cluster import KMeans, MeanShift
+from sklearn.cluster import KMeans, MeanShift, MiniBatchKMeans
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.cluster import estimate_bandwidth
@@ -17,15 +17,20 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                                                   scale=False,
                                                   reduce_dimensions=False,
                                                   clustering_type = "k_means",
-                                                  ms_samples = 10000,
-                                                  ms_bw_multiplier = 0.5,
+                                                  ms_samples = 50000,
+                                                  ms_bw_multiplier = 0.25,
+                                                  include_reward = False,
                                                   include_reward_in_output=False):
     observation_space = []
     for sampled_data in traces_obtained_from_all_agents:
         for trace in sampled_data:
             for x in trace:
-                state = x[0]
-                observation_space.append(state[0])
+                state = list(x[0][0])
+                reward = x[2]
+                if include_reward:
+                    state.append(reward)
+
+                observation_space.append(state)
                 # observation_space.extend([x[0][0:6] for trace in sampled_data for x in trace])
 
     num_traces = sum([len(x) for x in traces_obtained_from_all_agents])
@@ -35,6 +40,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     scaler = StandardScaler()
     scaler.fit(observation_space)
     save(scaler, f'standard_scaler_{num_traces}')
+
 
     if reduce_dimensions:
         pca = PCA(n_components=4)
@@ -49,7 +55,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     clustering_function = None
     cluster_labels = None
     if clustering_type == "k_means":
-        clustering_function = KMeans(n_clusters=n_clusters)
+        clustering_function = KMeans(n_clusters=n_clusters,init="k-means++")
         clustering_function.fit(observation_space)
         cluster_labels = list(clustering_function.labels_)
     elif clustering_type == "mean_shift":

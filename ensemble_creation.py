@@ -22,7 +22,7 @@ def get_trace_suffixes(trace):
 # returns a dictionary where key is cluster label and value is corresponding mdp
 def compute_ensemble_mdp(alergia_traces,
                          optimize_for='accuracy', alergia_eps=0.005,
-                         input_completeness='sink_state', skip_sequential_outputs=False,
+                         input_completeness='self_loop', skip_sequential_outputs=False,
                          save_path_prefix='ensemble', suffix_strategy='longest', depth=1, nr_traces_limit = -1):
     cluster_traces = defaultdict(list)
     ensemble_mdps = dict()
@@ -110,7 +110,7 @@ def load_ensemble(saved_path_prefix='ensemble', input_completeness='sink_state')
 
 if __name__ == '__main__':
     env_name = "LunarLander-v2"
-    num_traces = 1200
+    num_traces = 45000
     env = gym.make(env_name)
     dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 
@@ -120,9 +120,10 @@ if __name__ == '__main__':
         # traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.05, 0.1, 0.15])]
         traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.025, 0.05, 0.1, 0.15,0.2])]
     save(traces,trace_file)
-    alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, n_clusters=128,clustering_type="mean_shift",
+    alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, n_clusters=128,clustering_type="k_means",
                                                                    scale=False,)[0]
-    compute_ensemble_mdp(alergia_traces,suffix_strategy="all_nonconsec", save_path_prefix="ensemble_1_2k_meanshift",depth = 10, nr_traces_limit = 25000)
+    compute_ensemble_mdp(alergia_traces,suffix_strategy="longest", save_path_prefix="ensemble_45k_k_means",
+                         depth=1, nr_traces_limit = 25000)
     # compute_ensemble_mdp(alergia_traces,suffix_strategy="longest", save_path_prefix="ensemble_14k",depth = 5, nr_traces_limit = 25000)
 
     # ensemble_mdp = load_ensemble('ensemble')

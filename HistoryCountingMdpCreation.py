@@ -1,9 +1,10 @@
 from collections import defaultdict, Counter
-from random import random
+from random import random, choice
 from statistics import mean
 
 import gym
 import aalpy.paths
+from sklearn.metrics import euclidean_distances
 from stable_baselines3 import DQN
 from aalpy.automata import Mdp, MdpState
 
@@ -15,8 +16,8 @@ from utils import load, get_traces_from_policy, save
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 input_map = {v: k for k, v in action_map.items()}
 
-aalpy.paths.path_to_prism = 'C:/Program Files/prism-4.6/bin/prism.bat'
-
+aalpy.paths.path_to_prism = '/home/mtappler/Programs/prism-4.7-linux64/bin/prism'
+cluster_center_cache = dict()
 
 def counter_to_mdp(counter, initial_state_config='first'):
     label_to_mdp_state_map = dict()
@@ -83,6 +84,7 @@ def evaluate_ensemble(counter_mdps, env, clustering_function, scaler=None, num_e
         prism_schedulers[k] = PrismInterface(["succ"], v).scheduler
 
     max_history_size = max(counter_mdps.keys())
+    input("Start")
 
     all_rewards = []
     for _ in range(num_episodes):
@@ -109,9 +111,23 @@ def evaluate_ensemble(counter_mdps, env, clustering_function, scaler=None, num_e
                     if label in obs_set:
                         scheduler.current_state = s
                         break
-
-                # if state is reached, get action
-                if scheduler.current_state is not None:
+                if scheduler.current_state is None:
+                    min_dist = 1e30
+                    min_l = None
+                    for i, corr_center in enumerate(clustering_function.cluster_centers_):
+                        if i not in cluster_center_cache:
+                            cluster_center_cache[i] = clustering_function.predict(corr_center.reshape(1, -1))[0]
+                        distance = euclidean_distances(concrete_obs, corr_center.reshape(1, -1))
+                        if min_dist is None or distance < min_dist:
+                            min_dist = distance
+                            min_l = f"c{i}"
+                    for s, obs_set in scheduler.label_dict.items():
+                        if min_l in obs_set:
+                            scheduler.current_state = s
+                            break
+                else:
+                   #if state is reached, get action
+                    #if scheduler.current_state is not None:
                     action = scheduler.get_input()
                     if action is not None:
                         selected_actions[history_size] = action
@@ -120,7 +136,7 @@ def evaluate_ensemble(counter_mdps, env, clustering_function, scaler=None, num_e
                 action = selected_actions[max(selected_actions.keys())]
             else:
                 print(history)
-                action = random.choice(list(input_map.keys()))
+                action = choice(list(input_map.keys()))
 
             concrete_action = input_map[action]
             obs, rew, done, info = env.step(concrete_action)
@@ -136,9 +152,9 @@ def evaluate_ensemble(counter_mdps, env, clustering_function, scaler=None, num_e
 
 env_name = "LunarLander-v2"
 
-num_traces = 2000
-scale = True
-n_clusters = 128
+num_traces = 14000
+scale = False
+n_clusters = 1000
 history_size = 1
 
 env = gym.make(env_name)
@@ -159,4 +175,4 @@ histroy_mdps = counting_mdp_from_cluster_labels(alergia_traces, max_history_len=
 cf = load(f'k_means_scale_{scale}_{n_clusters}_{num_traces}')
 scaler = load(f'standard_scaler_{num_traces}') if scale else None
 
-evaluate_ensemble(histroy_mdps, env, cf, scaler, num_episodes=10)
+evaluate_ensemble(histroy_mdps, env, cf, scaler, num_episodes=20)

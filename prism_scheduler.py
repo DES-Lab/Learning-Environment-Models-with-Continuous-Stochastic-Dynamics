@@ -1,8 +1,35 @@
+import math
+import random
 from collections import defaultdict
+from math import sqrt
 from pathlib import Path
+from typing import Dict
 
 import aalpy.paths
+import numpy as np
+from aalpy.automata import Mdp
 from aalpy.utils import mdp_2_prism_format
+from scipy.stats import t
+from sklearn.metrics import euclidean_distances
+
+cluster_center_cache = dict()
+def find_closest_scheduler(conc_obs,clustering_function, schedulers):
+    min_dist = 1e30
+    min_l = None
+
+    for i, corr_center in enumerate(clustering_function.cluster_centers_):
+        if f"c{i}" not in schedulers.keys():
+            continue
+        if i not in cluster_center_cache:
+            cluster_center_cache[i] = clustering_function.predict(corr_center.reshape(1, -1))[0]
+        cluster = cluster_center_cache[i]
+        distance = euclidean_distances(conc_obs, corr_center.reshape(1, -1))
+        if min_dist is None or distance < min_dist:
+            min_dist = distance
+            min_l = f"c{i}"
+    return schedulers[min_l]
+
+
 
 class Scheduler:
     def __init__(self, initial_state, transition_dict, label_dict, scheduler_dict):
@@ -52,6 +79,169 @@ class Scheduler:
     def get_available_actions(self):
         trans_from_current = self.transition_dict[self.current_state]
         return list(set([action for prob, action, target_state in trans_from_current]))
+
+class ProbabilisticScheduler:
+    def __init__(self, scheduler : Scheduler, truly_probabilistic,max_state_size=6):
+        self.scheduler_dict = scheduler.scheduler_dict
+        self.initial_state = scheduler.initial_state
+        self.transition_dict = scheduler.transition_dict
+        self.label_dict = scheduler.label_dict
+        self.current_state = None
+        self.truly_probabilistic = truly_probabilistic
+        self.max_state_size = max_state_size
+        self.discount = 0.5
+
+    def get_input_preferences(self):
+        input_preference = defaultdict(float)
+        # print(self.current_state)
+        for (s,certainty) in self.current_state:
+            if s in self.scheduler_dict:
+                input_preference[self.scheduler_dict[s]] += certainty
+        # print(input_preference)
+        if len(input_preference) == 0:
+            return None
+        elif len(input_preference) == 1:
+            return input_preference
+        else:
+            return input_preference
+
+    def get_input(self):
+        input_preference = self.get_input_preferences()
+        if not input_preference:
+            return None
+        pref_list = list(input_preference.items())
+        inputs, weights = zip(*pref_list)
+        if self.truly_probabilistic:
+            return random.choices(inputs, weights=weights, k=1)[0]
+        else:
+            return inputs[np.argmax(weights)]
+
+    def reset(self):
+        self.current_state = [(self.initial_state,1.0)]
+        # self.current_state = self.initial_state
+
+    def _poss_step_to(self, state, action):
+        labeled_states = []
+        trans_from_current = self.transition_dict[state]
+        found_state = False
+        for (prob, action_loop, target_state) in trans_from_current:
+            if action_loop == action:
+                labeled_states.append((target_state,self.label_dict[target_state],prob))
+        return labeled_states
+    def has_transition(self, action, obs):
+        labeled_states = []
+        for (s,cert) in self.current_state:
+            trans_from_current = self.transition_dict[s]
+            for (prob, action_loop, target_state) in trans_from_current:
+                if action_loop == action and obs in self.label_dict[target_state]:
+                    return True
+        return False
+
+    def step_to(self, action, weighted_clusters : dict):
+        # assume weighted_clusters : dict : cluster_label -> probabilities, where probability is large enough
+        succs = []
+        # print("****"*20)
+        for (s,certainty) in self.current_state:
+            possible_successors = self._poss_step_to(s,action)
+            for (succ, labels,prob) in possible_successors:
+                for cluster in weighted_clusters.keys():
+                    if cluster in labels:
+                        # print(f"Taken {cluster} with weight {weighted_clusters[cluster]}")
+                        cluster_weight = weighted_clusters[cluster] #math.exp(-weighted_clusters[cluster])
+                        if cluster_weight != 0 and certainty != 0:
+                            succs.append((succ, certainty * cluster_weight))
+        succs.sort(key=lambda x : x[1],reverse=True)
+        if len(succs) == 0:
+            print("State size is zero!")
+            return False
+        if len(succs) > self.max_state_size:
+            succs = succs[0:self.max_state_size]
+
+        # normalize certainty to one
+        cert_sum = sum(map(lambda v : v[1], succs))
+        combined_state = defaultdict(float)
+        for s,cert in succs:
+            combined_state[s] += cert/cert_sum
+        self.current_state = list(combined_state.items())
+        # print(self.current_state)
+        return True
+class ProbabilisticEnsembleScheduler:
+    def __init__(self,mdp_ensemble : Dict[str,Mdp], target_label, input_map, truly_probabilistic, max_state_size):
+        self.mdp_ensemble = mdp_ensemble
+        self.target_label = target_label
+        self.max_state_size = max_state_size
+        self.truly_probabilistic = truly_probabilistic
+        self.scheduler_ensemble = self.compute_schedulers(mdp_ensemble)
+        self.active_schedulers = dict()
+        self.input_map = input_map
+        self.count_misses = True
+
+    def compute_schedulers(self,mdp_ensemble : Dict[str,Mdp]) -> Dict[str,ProbabilisticScheduler]:
+        schedulers = dict()
+        for cluster_label in mdp_ensemble.keys():
+            print(f"Initialized scheduler for {cluster_label}")
+            mdp = mdp_ensemble[cluster_label]
+            prism_interface = PrismInterface(self.target_label, mdp)
+            schedulers[cluster_label] = ProbabilisticScheduler(prism_interface.scheduler, self.truly_probabilistic,
+                                                               max_state_size=self.max_state_size)
+        return schedulers
+
+    def reset(self):
+        self.active_schedulers = dict()
+
+    def _find_closest_scheduler(self,weighted_clusters):
+        clusters_sorted = sorted(list(weighted_clusters.items()),key=lambda c_weight: c_weight[1], reverse=True)
+        for c,weight in clusters_sorted:
+            if c in self.scheduler_ensemble:
+                return c
+        assert False
+
+    def activate_scheduler(self,cluster_label,weighted_clusters):
+        if cluster_label not in self.active_schedulers.keys():
+            if cluster_label not in self.scheduler_ensemble:
+                # find closest
+                activated_scheduler = self._find_closest_scheduler(weighted_clusters)
+            else:
+                activated_scheduler = self.scheduler_ensemble[cluster_label]
+            self.active_schedulers[cluster_label] = (activated_scheduler,0)
+            self.active_schedulers[cluster_label][0].reset()
+
+    def step_to(self,inp, weighted_clusters : dict, predicted_label):
+        deactivate = []
+        add_misses = []
+        for label,(scheduler,misses) in self.active_schedulers.items():
+            reached_state = scheduler.step_to(inp,weighted_clusters)
+
+            if not reached_state:
+                # "deactivate"
+                deactivate.append(label)
+            elif not scheduler.has_transition(inp, predicted_label):
+                add_misses.append((label,(scheduler,misses+1)))
+        for label in deactivate:
+            self.active_schedulers.pop(label)
+        for label,(scheduler,new_misses) in add_misses:
+            self.active_schedulers[label] = (scheduler,new_misses)
+        self.activate_scheduler(predicted_label,weighted_clusters)
+        #print(f"active schedulers: {len(self.active_schedulers)}")
+
+    def get_input(self):
+        input_preferences = defaultdict(int)
+        for label,(scheduler,misses) in self.active_schedulers.items():
+            scheduler_preferences = scheduler.get_input_preferences()
+            if not scheduler_preferences:
+                print(f"Unknown input preferences for scheduler with label {label}")
+            else:
+                for input, preference in scheduler_preferences.items():
+                    if self.count_misses:
+                        input_preferences[input] += preference * (1.0 / (misses+1))
+                    else:
+                        input_preferences[input] += preference
+        if len(input_preferences) == 0:
+            print("Don't know any good input")
+            return random.choice(list(self.input_map.keys()))
+        (inputs, weights) = zip(*list(input_preferences.items()))
+        return random.choices(inputs, weights=weights)[0]
+
 
 class PrismInterface:
     def __init__(self, destination, model, num_steps=None, maximize = True):
@@ -197,3 +387,33 @@ class PrismSchedulerParser:
             else:
                 scheduler[source_state] = action
         return scheduler
+
+
+def compute_weighted_clusters(conc_obs,clustering_function,nr_outputs):
+    cluster_distances = clustering_function.transform(conc_obs).tolist()[0]
+    cluster_distances = sorted(list(map(lambda ind_c: (f"c{ind_c[0]}", ind_c[1]), enumerate(cluster_distances))),
+                               key=lambda x: x[1])[0:nr_outputs]
+    # print("===="*20)
+    # print(cluster_distances[0:10])
+    # print(cluster_distances)
+    # print(cluster_distances[-10:])
+
+    # print(cluster_distances)
+    nr_clusters = len(cluster_distances)
+    avg_distance = sum(map(lambda ind_c : ind_c[1],cluster_distances))/nr_clusters
+    variance = (sum(map(lambda ind_c : (ind_c[1] - avg_distance)**2,cluster_distances))/nr_clusters)
+    # print(avg_distance)
+    # print(sqrt(variance))
+    largest_distance = cluster_distances[nr_outputs - 1][1]
+    # weighted_clusters = dict(map(lambda v: (v[0],  (v[1]-avg_distance)**2 / (2*std_dev_squared)),
+    #                              cluster_distances))
+    # weighted_clusters = dict(map(lambda v: (v[0],
+    #                             (1-norm.cdf((v[1] - avg_distance) ** 2 / (2 * std_dev_squared))) / 2),
+    #                              cluster_distances))
+    cluster = f"c{clustering_function.predict(conc_obs).item()}"
+    weighted_clusters = dict(map(lambda v: (v[0],
+                                1-t.cdf(v[1],df=8,loc=avg_distance,
+                                            scale=sqrt(variance))),
+                                 cluster_distances))
+    print(f"Predicted cluster {cluster} with weight {weighted_clusters[cluster]}")
+    return weighted_clusters
