@@ -17,7 +17,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                                                   scale=False,
                                                   reduce_dimensions=False,
                                                   clustering_type = "k_means",
-                                                  ms_samples = 50000,
+                                                  clustering_samples = 100000,
                                                   ms_bw_multiplier = 0.25,
                                                   include_reward = False,
                                                   include_reward_in_output=False):
@@ -56,11 +56,12 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     cluster_labels = None
     if clustering_type == "k_means":
         clustering_function = KMeans(n_clusters=n_clusters,init="k-means++")
-        clustering_function.fit(observation_space)
-        cluster_labels = list(clustering_function.labels_)
+        reduced_obs_space = random.choices(observation_space, k=clustering_samples)
+        clustering_function.fit(reduced_obs_space)
+        cluster_labels = clustering_function.predict(np.array(observation_space,dtype=float)) #list(clustering_function.labels_)
     elif clustering_type == "mean_shift":
         # reduced_obs_space_bw = random.choices(observation_space,k=20000)
-        reduced_obs_space = random.choices(observation_space,k=ms_samples)
+        reduced_obs_space = random.choices(observation_space, k=clustering_samples)
         print("About to estimate bw")
         band_width = estimate_bandwidth(reduced_obs_space) * ms_bw_multiplier
         print("Estimated bw")
