@@ -2,6 +2,7 @@ import os
 import pickle
 import random
 
+import numpy as np
 from aalpy.base import SUL
 from sklearn.cluster import KMeans
 from tqdm import tqdm
