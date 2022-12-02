@@ -68,6 +68,7 @@ def evaluate(env, action_dict, clustering_function, scaler, history_window_size=
             if scaler:
                 conc_obs = scaler.transform(conc_obs)
             obs = f'c{clustering_function.predict(conc_obs)[0]}'
+            print(obs)
 
             history.append(obs)
             history = history[-history_window_size:]
@@ -87,9 +88,9 @@ def evaluate(env, action_dict, clustering_function, scaler, history_window_size=
 
 env_name = "LunarLander-v2"
 
-num_traces = 1000
+num_traces = 100
 scale = False
-n_clusters = 16
+n_clusters = 512
 history_size = 10
 
 env = gym.make(env_name)

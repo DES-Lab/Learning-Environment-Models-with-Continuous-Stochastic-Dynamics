@@ -35,9 +35,12 @@ def chose_action_based_on_euclidean_distance(env_obs, obs_action_pairs, num_comp
     min_dist = None
 
     shuffle(obs_action_pairs)
+    distances = []
 
     for obs, action in obs_action_pairs[:num_comparison]:
         ed = np.linalg.norm(env_obs - obs)
+
+        distances.append(ed)
         if not min_dist or ed < min_dist:
             min_dist = ed
             chosen_action = action
