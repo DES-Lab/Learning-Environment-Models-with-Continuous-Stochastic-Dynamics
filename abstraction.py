@@ -12,7 +12,7 @@ from utils import save
 
 
 def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agents,
-                                                  action_map,
+                                                  action_map, env_name,
                                                   n_clusters=16,
                                                   scale=False,
                                                   reduce_dimensions=False,
@@ -39,7 +39,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     observation_space = np.squeeze(observation_space)
     scaler = StandardScaler()
     scaler.fit(observation_space)
-    save(scaler, f'standard_scaler_{num_traces}')
+    save(scaler, f'standard_scaler_{env_name}_{num_traces}')
 
 
     if reduce_dimensions:
@@ -70,7 +70,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
         print(f"Found {len(clustering_function.cluster_centers_)} clusters with mean shift")
         cluster_labels = clustering_function.predict(observation_space)
 
-    save(clustering_function, f'{clustering_type}_scale_{scale}_{n_clusters}_{num_traces}')
+    save(clustering_function, f'{env_name}_{clustering_type}_scale_{scale}_{n_clusters}_{num_traces}')
 
     print('Cluster labels computed')
 
@@ -87,15 +87,22 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                 label_i += 1
                 # if include_reward_in_output:
                 # cluster_label += f'_{round(reward, 2)}'
-                if reward == 100 and done:
+
+                if "Lunar" in env_name and  reward == 100 and done:
                     alergia_sample.append(
                         (action_map[int(action)], f"{cluster_label}__succ__pos"))
-                elif reward == -100 and done:
+                elif "Lunar" in env_name and reward == -100 and done:
                     alergia_sample.append(
-                        (action_map[int(action)], f"bad__{cluster_label}"))
-                elif reward >= 10 and done:
+                        (action_map[int(action)], f"{cluster_label}__bad"))
+                elif "Lunar" in env_name and reward >= 10 and done:
                     alergia_sample.append(
-                        (action_map[int(action)], f"pos__{cluster_label}"))
+                        (action_map[int(action)], f"{cluster_label}__pos"))
+                elif "Lunar" in env_name and reward >= 10 and done:
+                    alergia_sample.append(
+                        (action_map[int(action)], f"{cluster_label}__pos"))
+                elif "Mountain" in env_name and done and len(alergia_sample) < 200:
+                    alergia_sample.append(
+                        (action_map[int(action)], f"{cluster_label}__succ"))
                 else:
                     alergia_sample.append(
                         (action_map[int(action)], cluster_label if not done else 'DONE'))  # action_map[int(action)]
