@@ -112,7 +112,8 @@ def load_ensemble(saved_path_prefix='ensemble', input_completeness='sink_state')
 if __name__ == '__main__':
     env_name = "LunarLander-v2"
     # env_name = "MountainCar-v0"
-    num_traces = 3000
+    num_traces = 21000
+
     env = gym.make(env_name)
 
     if env_name == "LunarLander-v2":
@@ -130,14 +131,15 @@ if __name__ == '__main__':
         # traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.05, 0.1, 0.15])]
         traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map,
                                          # randomness_probs=[0, 0.05, 0.01, 0.02, 0.03,0.04], duplicate_action=False)]
-                                         randomness_probs=[0, 0.05, 0.1, 0.15,0.2,0.25], duplicate_action=False)]
-    save(traces,trace_file)
+                                         # randomness_probs=[0, 0.05, 0.1, 0.15,0.2,0.25], duplicate_action=False)]
+                                         randomness_probs=[0, 0.15, 0.25, 0.35,0.5], duplicate_action=False)]
+        save(traces,trace_file)
     alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, env_name, include_reward=False,
                                                                    n_clusters=num_clusters,clustering_type="k_means",
                                                                    scale=scale,)[0]
-    compute_ensemble_mdp(alergia_traces,suffix_strategy="all",optimize_for="accuracy",input_completeness="sink_state",alergia_eps=0.005,
-                         save_path_prefix=f"ensemble_all_{env_name}_{num_traces}_scale_{scale}_k_means_{num_clusters}",
-                         depth=10, nr_traces_limit = 30000)
+    compute_ensemble_mdp(alergia_traces,suffix_strategy="longest",optimize_for="accuracy",input_completeness="sink_state",alergia_eps=0.005,
+                         save_path_prefix=f"ensemble_longest_more_random_{env_name}_{num_traces}_scale_{scale}_k_means_{num_clusters}",
+                         depth=3, nr_traces_limit = 30000)
     # compute_ensemble_mdp(alergia_traces,suffix_strategy"longest", save_path_prefix="ensemble_14k",depth = 5, nr_traces_limit = 25000)
 
     # ensemble_mdp = load_ensemble('ensemble')

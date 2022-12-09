@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 from sklearn.cluster import KMeans, MeanShift, MiniBatchKMeans
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PowerTransformer
 from sklearn.cluster import estimate_bandwidth
 from utils import save
 
@@ -37,9 +37,9 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
 
     observation_space = np.array(observation_space)
     observation_space = np.squeeze(observation_space)
-    scaler = StandardScaler()
+    scaler = PowerTransformer()
     scaler.fit(observation_space)
-    save(scaler, f'standard_scaler_{env_name}_{num_traces}')
+    save(scaler, f'power_scaler_{env_name}_{num_traces}')
 
 
     if reduce_dimensions:
