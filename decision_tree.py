@@ -4,7 +4,9 @@ from statistics import mean
 import gym
 import numpy as np
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler, PowerTransformer, FunctionTransformer
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler, PowerTransformer, FunctionTransformer, \
+    PolynomialFeatures, SplineTransformer
 from stable_baselines3 import DQN
 
 from agents import load_agent
@@ -92,9 +94,12 @@ x,y = [i[0] for i in obs_action_pairs], [i[1] for i in obs_action_pairs]
 x = np.array(x)
 y = np.array(y)
 
-scaler = FunctionTransformer(add_more_features) # PowerTransformer() #PCA(n_components=6) #None # StandardScaler()
+scaler = make_pipeline(
+    PolynomialFeatures(interaction_only=True)
+    #FunctionTransformer(add_more_features)) # PowerTransformer() #PCA(n_components=6) #None # StandardScaler()
+)
 if scaler is not None:
-    x = scaler.transform(x)
+    x = scaler.fit_transform(x)
 dt = tree.DecisionTreeClassifier(max_leaf_nodes=256) #, ccp_alpha=0.0001)
 dt.fit(x, y)
 
@@ -105,7 +110,7 @@ print(dt.get_n_leaves())
 # df.apply(obs)
 
 
-evaluate_on_environment(env, dt, scaler, render=True)
+evaluate_on_environment(env, dt, scaler, render=False)
 # exit()
 dot_data = tree.export_graphviz(dt)
 graph = graphviz.Source(dot_data)

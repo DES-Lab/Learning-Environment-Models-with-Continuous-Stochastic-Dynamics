@@ -82,7 +82,7 @@ def run_episode(env, agent, input_map, ensemble_scheduler : ProbabilisticEnsembl
 
 
 num_clusters = 256
-num_traces = 21000
+num_traces = 2300
 scale = True
 clustering_type = "k_means"
 environment = 'LunarLander-v2'
@@ -104,8 +104,8 @@ max_state_size = 2
 truly_probabilistic = True
 count_misses = False
 duplicate_action = False
-ensemble_name = f"ensemble_longest_more_random_{environment}"
-sched_name = f"prob_sched_{ensemble_name}_{clustering_type}_{num_traces}_{scale}_{num_clusters}"
+ensemble_name = f"ensemble_all_{environment}"
+sched_name = None # f"prob_sched_{ensemble_name}_{clustering_type}_{num_traces}_{scale}_{num_clusters}"
 ensemble_scheduler = load(sched_name)
 if ensemble_scheduler is None:
     mdp_ensemble = load_mdp_ensemble(environment, ensemble_name, num_clusters, num_traces, scale)
@@ -116,7 +116,7 @@ if ensemble_scheduler is None:
 ensemble_scheduler.set_max_state_size(max_state_size)
 ensemble_scheduler.count_misses = count_misses
 ensemble_scheduler.truly_probabilistic = truly_probabilistic
-scaler = load(f'power_scaler_{environment}_{num_traces}') if scale else None
+scaler = load(f'pipeline_scaler_{environment}_{num_traces}') if scale else None
 clustering_function = load(f'{environment}_{clustering_type}_scale_{scale}_{num_clusters}_{num_traces}')
 env = gym.make(environment)
 

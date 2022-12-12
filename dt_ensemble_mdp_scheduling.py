@@ -1,3 +1,4 @@
+import math
 from typing import Dict
 
 import aalpy.paths
@@ -22,6 +23,7 @@ def cluster_from_out(out):
 
 def compute_weighted_outs(tree_copy, obs, possible_outs, nr_outs):
     predicted_id = int(obs[1:])
+    class_probs_predicted = tree_copy.leaf_ids_to_class_probs[predicted_id]
     weighted_outputs = dict()
     # print(obs)
     for o in possible_outs:
@@ -29,6 +31,15 @@ def compute_weighted_outs(tree_copy, obs, possible_outs, nr_outs):
         for label in labels:
             if label.startswith("c"):
                 o_leave_id = int(o[1:])
+                class_probs_o = tree_copy.leaf_ids_to_class_probs[o_leave_id]
+                distance = 0
+                for (c_p_p,c_p_o) in zip(class_probs_predicted,class_probs_o):
+                    distance += (c_p_p - c_p_o) ** 2
+                distance = math.sqrt(distance)
+                # print(class_probs_predicted)
+                # print(class_probs_o)
+                # print(distance)
+
                 path_to_root_predicted = tree_copy.paths_to_root[predicted_id]
                 path_to_root_o = tree_copy.paths_to_root[o_leave_id]
                 # print(path_to_root_predicted)
@@ -39,24 +50,37 @@ def compute_weighted_outs(tree_copy, obs, possible_outs, nr_outs):
                         common_path_len += 1
                     else:
                         break
-                weighted_outputs[label] = common_path_len
+                weighted_outputs[label] = distance * (len(path_to_root_predicted)-common_path_len + 1)
 
     if nr_outs > 0:
-        weighted_outputs = sorted(list(weighted_outputs.items()), key=lambda w : w[1], reverse=True)[0:nr_outs]
+        weighted_outputs = sorted(list(weighted_outputs.items()), key=lambda w : w[1], reverse=False)[0:nr_outs]
         weighted_outputs = dict(weighted_outputs)
-    weight_sum = sum(weighted_outputs.values())
 
-    shortest_common_path = min(weighted_outputs.values())
-    weight_sum -= len(weighted_outputs) * shortest_common_path
-    # print(weighted_outputs)
-    if weight_sum == 0:
-        for label in weighted_outputs:
-            weighted_outputs[label] = 1/len(weighted_outputs)
+    weight_sum = sum(weighted_outputs.values())
+    weighted_outputs_normalized = dict()
+    # print(f"weighted outputs: {weighted_outputs}")
+    if weight_sum > 0:
+        for label in weighted_outputs.keys():
+            weighted_outputs_normalized[label] = (weight_sum-weighted_outputs[label])/(weight_sum*(nr_outs-1))
+        weighted_outputs = weighted_outputs_normalized
     else:
-        # print("HERE")
-        for label in weighted_outputs:
-            weighted_outputs[label] = (weighted_outputs[label] - shortest_common_path + 1)/ weight_sum
-            # weighted_outputs[label] = (weighted_outputs[label] / weight_sum)
+        for label in weighted_outputs.keys():
+            weighted_outputs[label] = 1.0 / nr_outs
+    # print(f"weighted outputs: {weighted_outputs}")
+    # print(f"check {sum(weighted_outputs.values())}")
+    # weight_sum = sum(weighted_outputs.values())
+    #
+    # shortest_common_path = min(weighted_outputs.values())
+    # weight_sum -= len(weighted_outputs) * shortest_common_path
+    # # print(weighted_outputs)
+    # if weight_sum == 0:
+    #     for label in weighted_outputs:
+    #         weighted_outputs[label] = 1/len(weighted_outputs)
+    # else:
+    #     # print("HERE")
+    #     for label in weighted_outputs:
+    #         weighted_outputs[label] = (weighted_outputs[label] - shortest_common_path + 1)/ weight_sum
+    #         # weighted_outputs[label] = (weighted_outputs[label] / weight_sum)
     return weighted_outputs
 
 def run_episode(env, agent, input_map, tree_copy, ensemble_scheduler : ProbabilisticEnsembleScheduler,
@@ -97,14 +121,14 @@ def run_episode(env, agent, input_map, tree_copy, ensemble_scheduler : Probabili
         possible_outs = ensemble_scheduler.possible_outputs(action)
         weighted_clusters = compute_weighted_outs(tree_copy, obs,possible_outs, nr_outputs)
         ensemble_scheduler.step_to(action, weighted_clusters, obs)
-        #env.render()
+        env.render()
         if done:
             return reward, nr_agree/steps, reward > 1
 
 num_traces_dt = 6000
 max_leaves = 512
-num_traces = 2300
-scale = True
+num_traces = 4600
+scale = False
 ensemble_name = "ensemble_all"
 target_label = "succ"
 
@@ -127,6 +151,7 @@ input_map = {v: k for k, v in action_map.items()}
 dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 
 sched_name = f"prob_sched_{ensemble_name}_{num_traces_dt}_{num_traces}_{scale}_{max_leaves}"
+
 ensemble_scheduler = load(sched_name)
 if ensemble_scheduler is None:
     mdp_ensemble = load_mdp_ensemble(environment,ensemble_name, num_traces, scale, max_leaves)
@@ -134,6 +159,7 @@ if ensemble_scheduler is None:
                                                         max_state_size,count_misses)
     save(ensemble_scheduler, sched_name)
 
+ensemble_scheduler.max_misses = 10
 ensemble_scheduler.set_max_state_size(max_state_size)
 ensemble_scheduler.count_misses = count_misses
 ensemble_scheduler.truly_probabilistic = truly_probabilistic
@@ -142,19 +168,19 @@ dt = load(f'dt_{environment}_{num_traces_dt}_{max_leaves}_{scale}')
 
 env = gym.make(environment)
 tree_copy_file_name = f"tree_copy_{num_traces_dt}_{max_leaves}_{num_traces}_{scale}"
-tree_copy = load(tree_copy_file_name)
+tree_copy =  load(tree_copy_file_name)
 if tree_copy is None:
     tree_copy = build_tree_copy(dt.tree_)
-    tree_copy.compute_aux_information()
+    tree_copy.compute_aux_information(dt.tree_)
     save(tree_copy,tree_copy_file_name)
 
 nr_test_episodes = 5
 
-for truly_probabilistic in [False,True]:
+for truly_probabilistic in [True,False]:
     # for c_misses,n_outputs, state_size in [(False,6,2),(False,10,4)]:
     for c_misses in [False,True]:
-        for n_outputs in range(4,128,4): #[6,10,18]:
-            for state_size in range(4,128,4): #[10,20]:
+        for n_outputs in range(2,256,8): #[6,10,18]:
+            for state_size in range(2,256,8): #[10,20]:
                 print(f"T-Prob:{truly_probabilistic}, c-misses:{c_misses}, nr-out: {n_outputs}, states:{state_size}")
                 ensemble_scheduler.set_max_state_size(state_size)
                 ensemble_scheduler.count_misses = c_misses

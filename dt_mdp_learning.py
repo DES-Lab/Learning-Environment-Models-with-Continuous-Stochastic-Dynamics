@@ -38,11 +38,12 @@ class Tree:
         self.inv_depths_to_node_ids = None
         self.leaf_ids_below_nodes = dict()
         self.largest_depth = 1
+        self.leaf_ids_to_class_probs = dict()
 
     def add(self,id, node):
         self.id_to_node[id] = node
 
-    def compute_aux_information(self):
+    def compute_aux_information(self, base_tree):
         self.inv_depths_to_node_ids = defaultdict(list)
         for id,node in self.id_to_node.items():
             depth = node.inverse_depth()
@@ -51,6 +52,13 @@ class Tree:
         for id, node in self.id_to_node.items():
             self.leaf_ids_below_nodes[id] = node.leaf_ids_below()
             self.paths_to_root[id] = node.path_to_root()
+            if node.is_leaf():
+                class_probs = list(base_tree.value[id][0])
+                normalizer = sum(class_probs)
+                for i in range(len(class_probs)):
+                    class_probs[i] /= normalizer
+                self.leaf_ids_to_class_probs[id] = class_probs
+                print(f"Class probabilities in leaf {id}: {class_probs}")
 
 class TreeNode:
     def __init__(self, id, parent):
@@ -232,7 +240,7 @@ if __name__ == "__main__":
     load_observations = True
     max_leaf_nodes = 512
     random_obs_pairs = [0, 0.1, 0.2, 0.3,0.4]
-    scale = True
+    scale = False
     if scale:
         transformer = FunctionTransformer(add_features)
     else:
@@ -259,7 +267,7 @@ if __name__ == "__main__":
     evaluate_on_environment(env, dt, transformer, render=False)
     save(dt, f"dt_{env_name}_{num_traces_dt}_{max_leaf_nodes}_{scale}")
 
-    num_traces_env_learn =2300
+    num_traces_env_learn =4600
     trace_file = f"{env_name}_{num_traces_env_learn}_traces"
     traces = load(trace_file)
     if traces is None:
@@ -280,4 +288,4 @@ if __name__ == "__main__":
     compute_ensemble_mdp(alergia_traces,suffix_strategy="all",optimize_for="accuracy",
                          input_completeness="sink_state",alergia_eps=0.005,
                          save_path_prefix=f"dt_ensemble_all_{env_name}_{num_traces_env_learn}_scale_{scale}_{max_leaf_nodes}",
-                         depth=10, nr_traces_limit = 30000)
+                         depth=10, nr_traces_limit = 40000)

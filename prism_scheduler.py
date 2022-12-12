@@ -161,14 +161,14 @@ class ProbabilisticScheduler:
                         succs.append((succ, certainty*cluster_weight))
 
         succs.sort(key=lambda x : x[1],reverse=True)
-        if len(succs) == 0:
+
+        cert_sum = sum(map(lambda v : v[1], succs))
+        if len(succs) == 0 or cert_sum == 0:
             # print("State size is zero!")
             return False
         if len(succs) > self.max_state_size:
             succs = succs[0:self.max_state_size]
-
         # normalize certainty to one
-        cert_sum = sum(map(lambda v : v[1], succs))
         combined_state = defaultdict(float)
         for s,cert in succs:
             combined_state[s] += cert / cert_sum
@@ -186,6 +186,7 @@ class ProbabilisticEnsembleScheduler:
         self.active_schedulers = dict()
         self.input_map = input_map
         self.count_misses = count_misses
+        self.max_misses = 5
 
     def set_max_state_size(self, max_state_size):
         self.max_state_size = max_state_size
@@ -236,7 +237,11 @@ class ProbabilisticEnsembleScheduler:
                 # "deactivate"
                 deactivate.append(label)
             elif not scheduler.has_transition(inp, predicted_label):
-                add_misses.append((label,(scheduler,misses+1)))
+                if misses < self.max_misses:
+                    add_misses.append((label,(scheduler,misses+1)))
+                else:
+                    # print(f"Deactivating {label}")
+                    deactivate.append(label)
         for label in deactivate:
             self.active_schedulers.pop(label)
         for label,(scheduler,new_misses) in add_misses:

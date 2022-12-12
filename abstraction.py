@@ -1,12 +1,13 @@
 import random
 
 import sklearn
+from sklearn.pipeline import make_pipeline
 from tqdm import tqdm
 
 import numpy as np
 from sklearn.cluster import KMeans, MeanShift, MiniBatchKMeans
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler, PowerTransformer
+from sklearn.preprocessing import StandardScaler, PowerTransformer, Normalizer
 from sklearn.cluster import estimate_bandwidth
 from utils import save
 
@@ -37,10 +38,12 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
 
     observation_space = np.array(observation_space)
     observation_space = np.squeeze(observation_space)
-    scaler = PowerTransformer()
+    # scaler = PowerTransformer()
+    # scaler.fit(observation_space)
+    # save(scaler, f'power_scaler_{env_name}_{num_traces}')
+    scaler = make_pipeline(PowerTransformer(standardize=False))
     scaler.fit(observation_space)
-    save(scaler, f'power_scaler_{env_name}_{num_traces}')
-
+    save(scaler, f'pipeline_scaler_{env_name}_{num_traces}')
 
     if reduce_dimensions:
         pca = PCA(n_components=4)
