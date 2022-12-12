@@ -44,11 +44,8 @@ def plot_lunar_lander():
             # plt.show()
 
 
-def plot_cartpole_or_mountain_car(exp):
-    assert exp in {'cartpole', 'mountain_car'}
-    pickle_path = 'smc_cartpole.pickle' if exp == 'cartpole' else 'smc_mountain_car.pickle'
-
-    with open(pickle_path, 'rb') as handle:
+def plot_reward_only(path_to_pickle, exp_name):
+    with open(path_to_pickle, 'rb') as handle:
         data = pickle.load(handle)
 
     plot_options = {'reward': 3}
@@ -79,14 +76,14 @@ def plot_cartpole_or_mountain_car(exp):
 
             fig.set_xlabel('Policy Steps')
             fig.set_ylabel('Random Steps')
-            title = f'Cartpole {agent} agent' if exp == 'cartpole' else f'MountainCar {agent} agent'
+            title = f'{exp_name} {agent} agent'
             fig.set_title(
                 f'{title}: % {data_type} reached' if data_type != 'reward' else f'{title}: mean reward')
-            plt.savefig(f'plots/cartpole_{agent}_{data_type}.pdf', dpi=300)
+            plt.savefig(f'plots/{exp_name}_{agent}_{data_type}.pdf', dpi=300)
             plt.close()
 
 
-plot_cartpole_or_mountain_car(exp='mountain_car')
+plot_reward_only(path_to_pickle='smc_bipedal_walker.pickle', exp_name='BipedalWalker')
 
 # plot_lunar_lander()
 exit()

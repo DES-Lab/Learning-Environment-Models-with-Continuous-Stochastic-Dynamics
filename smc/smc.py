@@ -25,7 +25,9 @@ def smc(agent, env, num_optimal_moves, num_random_moves, agent_name, available_a
         while True:
             action, _ = agent.predict(obs)
 
-            previous_actions.append(action)
+            if available_actions == 'bipedal_walker':
+                previous_actions.append(action)
+
             if optimal_counter < num_optimal_moves:
                 optimal_counter += 1
             else:
