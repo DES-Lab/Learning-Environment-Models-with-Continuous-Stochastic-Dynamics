@@ -1,14 +1,17 @@
-import gym
+import pickle
+from collections import defaultdict
+from itertools import product
 from random import choice
 from statistics import mean
+
 from tqdm import tqdm
 
-from stable_baselines3 import DQN, A2C
-
-from agents import load_agent, get_lunar_lander_agents_smc, get_mountaincar_agents_smc
+from agents import get_lunar_lander_agents_smc
 
 
-def smc(agent, env, num_optimal_moves, num_random_moves, agent_name, available_actions, num_runs=100, render=False):
+# pip install ufal.pybox2d
+
+def smc(agent, env, num_optimal_moves, num_random_moves, agent_name, available_actions, num_runs=300, render=False):
     goal_reached, crash, time_out, rewards = 0, 0, 0, []
 
     for _ in tqdm(range(num_runs)):
@@ -48,21 +51,37 @@ def smc(agent, env, num_optimal_moves, num_random_moves, agent_name, available_a
 
                 break
 
+    goal_reached = round(goal_reached / num_runs * 100, 2)
+    crash = round(crash / num_runs * 100, 2)
+    time_out = round(time_out / num_runs * 100, 2)
     print('--------------------------------------------------------------------------------------')
     print(f'Agent: {agent_name}')
     print(f'SMC Statistics for {num_optimal_moves, num_random_moves} configuration.')
-    print(f'Goal       : {round(goal_reached / num_runs * 100, 2)}')
-    print(f'Crash      : {round(crash / num_runs * 100, 2)}')
-    print(f'Time-out   : {round(time_out / num_runs * 100, 2)}')
+    print(f'Goal       : {goal_reached}')
+    print(f'Crash      : {crash}')
+    print(f'Time-out   : {time_out}')
 
     print(f'Mean Reward: {mean(rewards)}')
 
-    return goal_reached, crash, mean(rewards)
+    return goal_reached, crash, time_out, mean(rewards)
 
+num_policy_steps = list(range(10, 60, 10))
+num_random_steps = list(range(1, 11, 2))
 
-experiment_configs = [(10, 1), (20, 1), (30, 3), (50, 5), (50, 10)]
-agent_configs, available_actions, env = get_mountaincar_agents_smc()
+experiment_configs = list(product(num_policy_steps, num_random_steps))
+print(experiment_configs)
+# exit()
+
+#experiment_configs = [(10, 1), (20, 1),] #  (30, 1), (50, 5), (50, 10)
+agent_configs, available_actions, env = get_lunar_lander_agents_smc()
+
+experiment_results = defaultdict(dict)
+
 for num_policy_moves, num_random_moves in experiment_configs:
     for agent_name, agent in agent_configs:
-        smc(agent, env, num_optimal_moves=num_policy_moves, num_random_moves=num_random_moves,
-            available_actions = available_actions, agent_name=agent_name, render=False)
+        data = smc(agent, env, num_optimal_moves=num_policy_moves, num_random_moves=num_random_moves,
+                   available_actions=available_actions, agent_name=agent_name, num_runs=300)
+        experiment_results[agent_name][(num_policy_moves, num_random_moves)] = data
+
+with open('smc_lunar_lander.pickle', 'wb') as handle:
+    pickle.dump(experiment_results, handle, protocol=pickle.HIGHEST_PROTOCOL)
