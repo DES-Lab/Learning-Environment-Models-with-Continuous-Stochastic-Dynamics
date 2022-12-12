@@ -4,5 +4,5 @@ stable-baselines3[extra]
 huggingface_sb3
 tqdm
 pyglet
-
+sb3_contrib
 # for edi comp pip install ufal.pybox2d
