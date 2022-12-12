@@ -26,8 +26,8 @@ model.make_input_complete(missing_transition_go_to='sink_state')
 prism_interface = PrismInterface(["succ"], model)
 scheduler = ProbabilisticScheduler(prism_interface.scheduler,True)
 
-action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
-input_map = {v: k for k, v in action_map.items()}
+# action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
+# input_map = {v: k for k, v in action_map.items()}
 
 clustering_function = load(f'k_means_scale_{scale}_{num_clusters}_{num_traces}')
 scaler = load(f"standard_scaler_{num_traces}")

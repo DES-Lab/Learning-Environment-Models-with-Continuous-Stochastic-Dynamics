@@ -19,12 +19,20 @@ input_map = {v: k for k, v in action_map.items()}
 aalpy.paths.path_to_prism = '/home/mtappler/Programs/prism-4.7-linux64/bin/prism'
 cluster_center_cache = dict()
 
-def counter_to_mdp(counter, initial_state_config='first'):
+def counter_to_mdp(counter, initial_state_config='first', only_last_cluster=False):
     label_to_mdp_state_map = dict()
     state_counter = 0
     for label, _ in counter.keys():
         state_counter += 1
-        label_to_mdp_state_map[label] = MdpState(f's{state_counter}', output=label)
+        output = label
+        if label != "DONE" and label != "succ" and label != "pos" and \
+                only_last_cluster:
+            labels = output.split("_")
+            non_cluster_labels = list(filter(lambda x: not x.startswith("c") and not len(x) == 0, labels))
+            cluster_labels = list(filter(lambda x: x.startswith("c"), labels))
+            last_cluster = cluster_labels[-1]
+            output = "__".join([last_cluster] + non_cluster_labels)
+        label_to_mdp_state_map[label] = MdpState(f's{state_counter}', output=output)
 
     for (origin, action), destination_counter in counter.items():
         total_obs = sum(destination_counter.values())
@@ -33,7 +41,16 @@ def counter_to_mdp(counter, initial_state_config='first'):
             # for succ states
             if destination_label not in label_to_mdp_state_map.keys():
                 state_counter += 1
-                label_to_mdp_state_map[destination_label] = MdpState(f's{state_counter}', output=destination_label)
+                output = destination_label
+
+                if destination_label != "DONE" and destination_label != "succ" and destination_label != "pos" and \
+                        only_last_cluster:
+                    labels = output.split("_")
+                    non_cluster_labels = list(filter(lambda x : not x.startswith("c") and not len(x) == 0, labels))
+                    cluster_labels = list(filter(lambda x : x.startswith("c"), labels))
+                    last_cluster = cluster_labels[-1]
+                    output = "__".join([last_cluster] + non_cluster_labels)
+                label_to_mdp_state_map[destination_label] = MdpState(f's{state_counter}', output=output)
 
             origin_state = label_to_mdp_state_map[origin]
             destination_state = label_to_mdp_state_map[destination_label]
@@ -48,7 +65,7 @@ def counter_to_mdp(counter, initial_state_config='first'):
     return Mdp(initial_state, list(label_to_mdp_state_map.values()))
 
 
-def counting_mdp_from_cluster_labels(alergia_traces, max_history_len=5, initial_state_config='first'):
+def counting_mdp_from_cluster_labels(alergia_traces, max_history_len=5, initial_state_config='first', only_last_cluster = True):
     counting_mdps_increasing_history = dict()
     for i in range(1, max_history_len + 1):
         print(f'Creating MDP with history size of {i}')
@@ -58,6 +75,9 @@ def counting_mdp_from_cluster_labels(alergia_traces, max_history_len=5, initial_
         for trace in alergia_traces:
             trace_splits = [(trace[j:j + i], trace[j + i:j + 2 * i]) for j in range(1, len(trace))]
             for x, y in trace_splits:
+
+                if len(y) == 0:
+                    continue
                 origin_label = '_'.join([l[1] for l in x])
                 destination_label = '_'.join([l[1] for l in y])
 
@@ -70,7 +90,7 @@ def counting_mdp_from_cluster_labels(alergia_traces, max_history_len=5, initial_
                 action = x[-1][0]
                 observation_counter[(origin_label, action)][destination_label] += 1
 
-        mdp = counter_to_mdp(observation_counter, initial_state_config)
+        mdp = counter_to_mdp(observation_counter, initial_state_config, only_last_cluster)
         mdp.make_input_complete('sink_state')
         counting_mdps_increasing_history[i] = mdp
 
@@ -152,10 +172,10 @@ def evaluate_ensemble(counter_mdps, env, clustering_function, scaler=None, num_e
 
 env_name = "LunarLander-v2"
 
-num_traces = 14000
+num_traces = 2200
 scale = False
-n_clusters = 1000
-history_size = 1
+n_clusters = 512
+history_size = 2
 
 env = gym.make(env_name)
 
@@ -172,7 +192,8 @@ alergia_traces = \
 
 histroy_mdps = counting_mdp_from_cluster_labels(alergia_traces, max_history_len=history_size)
 
-cf = load(f'k_means_scale_{scale}_{n_clusters}_{num_traces}')
-scaler = load(f'standard_scaler_{num_traces}') if scale else None
+#cf = load(f'k_means_scale_{scale}_{n_clusters}_{num_traces}')
+#scaler = load(f'standard_scaler_{num_traces}') if scale else None
 
-evaluate_ensemble(histroy_mdps, env, cf, scaler, num_episodes=20)
+histroy_mdps[history_size].save(f"simple_mdp_{num_traces}_{scale}_{n_clusters}_{history_size}")
+# evaluate_ensemble(histroy_mdps, env, cf, scaler, num_episodes=20)

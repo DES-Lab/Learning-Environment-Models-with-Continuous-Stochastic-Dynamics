@@ -11,7 +11,6 @@ from abstraction import compute_clustering_function_and_map_to_traces
 from agents import load_agent
 from utils import get_traces_from_policy, save_samples_to_file, delete_file, compress_trace, save, load
 
-action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 
 
 # gets suffixes of a trace, removes INIT placeholder
@@ -112,24 +111,34 @@ def load_ensemble(saved_path_prefix='ensemble', input_completeness='sink_state')
 
 if __name__ == '__main__':
     env_name = "LunarLander-v2"
-    num_traces = 1000
+    # env_name = "MountainCar-v0"
+    num_traces = 2300
+
     env = gym.make(env_name)
-    dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
+
+    if env_name == "LunarLander-v2":
+        dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
+        action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
+    else:
+        dqn_agent = load_agent('DBusAI/DQN-MountainCar-v0-v2', 'DQN-MountainCar-v0.zip', DQN)
+        action_map = {0: 'left', 1: 'no_action', 2: 'right'}
 
     trace_file = f"{env_name}_{num_traces}_traces"
-    num_clusters = 1024
-    scale = False
+    num_clusters = 256
+    scale = True
     traces = load(trace_file)
     if traces is None:
         # traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.05, 0.1, 0.15])]
         traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map,
                                          # randomness_probs=[0, 0.05, 0.01, 0.02, 0.03,0.04], duplicate_action=False)]
                                          randomness_probs=[0, 0.05, 0.1, 0.15,0.2,0.25], duplicate_action=False)]
-    save(traces,trace_file)
-    alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, n_clusters=num_clusters,clustering_type="k_means",
+                                         # randomness_probs=[0, 0.15, 0.25, 0.35,0.5], duplicate_action=False)]
+        save(traces,trace_file)
+    alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, env_name, include_reward=False,
+                                                                   n_clusters=num_clusters,clustering_type="k_means",
                                                                    scale=scale,)[0]
-    compute_ensemble_mdp(alergia_traces,suffix_strategy="all",optimize_for="accuracy",input_completeness="sink_state",
-                         save_path_prefix=f"ensemble_all_{num_traces}_scale_{scale}_k_means_{num_clusters}",
+    compute_ensemble_mdp(alergia_traces,suffix_strategy="all",optimize_for="accuracy",input_completeness="sink_state",alergia_eps=0.005,
+                         save_path_prefix=f"ensemble_all_{env_name}_{num_traces}_scale_{scale}_k_means_{num_clusters}",
                          depth=3, nr_traces_limit = 30000)
     # compute_ensemble_mdp(alergia_traces,suffix_strategy"longest", save_path_prefix="ensemble_14k",depth = 5, nr_traces_limit = 25000)
 

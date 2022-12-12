@@ -71,7 +71,8 @@ def compress_trace(x):
     return [key for key, _group in groupby(x)]
 
 
-def get_traces_from_policy(agent, env, num_episodes, action_map,stop_prob = 0, randomness_probs=(0,)):
+def get_traces_from_policy(agent, env, num_episodes, action_map,stop_prob = 0, randomness_probs=(0,),
+                           duplicate_action=False):
     traces = []
     rand_i = 0
     for _ in tqdm(range(num_episodes)):
@@ -85,6 +86,8 @@ def get_traces_from_policy(agent, env, num_episodes, action_map,stop_prob = 0, r
             else:
                 action, _ = agent.predict(observation)
             observation, reward, done, info = env.step(action)
+            if duplicate_action:
+                observation, reward, done, info = env.step(action)
             episode_trace.append((observation.reshape(1, -1), action, reward, done))
             if stop_prob > 0 and random.random() < stop_prob:
                 break
