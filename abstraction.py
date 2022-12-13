@@ -7,10 +7,19 @@ from tqdm import tqdm
 import numpy as np
 from sklearn.cluster import KMeans, MeanShift, MiniBatchKMeans
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler, PowerTransformer, Normalizer
+from sklearn.preprocessing import StandardScaler, PowerTransformer, Normalizer, FunctionTransformer
 from sklearn.cluster import estimate_bandwidth
+
 from utils import save
 
+def change_features_clustering(x):
+    transformed = np.zeros((x.shape[0],4))
+    # transformed[:x.shape[0], :x.shape[1]] = x
+    transformed[:, 0] = x[:, 0] + x[:,2]
+    transformed[:, 1] = x[:, 1] + x[:,3]
+    transformed[:, 2] = x[:, 4] + x[:,5]
+    transformed[:, 3] = x[:, 6] + x[:,7]
+    return transformed
 
 def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agents,
                                                   action_map, env_name,
@@ -41,7 +50,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     # scaler = PowerTransformer()
     # scaler.fit(observation_space)
     # save(scaler, f'power_scaler_{env_name}_{num_traces}')
-    scaler = make_pipeline(PowerTransformer(standardize=False))
+    scaler = make_pipeline(FunctionTransformer(change_features_clustering))
     scaler.fit(observation_space)
     save(scaler, f'pipeline_scaler_{env_name}_{num_traces}')
 
@@ -85,24 +94,25 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
         dataset = []
         for sample in tqdm(policy_samples):
             alergia_sample = ['INIT']
-            for _, action, reward, done in sample:
+            for state, action, reward, done in sample:
                 cluster_label = f'c{cluster_labels[label_i]}'
                 label_i += 1
                 # if include_reward_in_output:
                 # cluster_label += f'_{round(reward, 2)}'
 
+                additional_label = "__low" if "Lunar" in env_name and state[0][1] <= 0.2 else ""
                 if "Lunar" in env_name and  reward == 100 and done:
                     alergia_sample.append(
-                        (action_map[int(action)], f"{cluster_label}__succ__pos"))
+                        (action_map[int(action)], f"{cluster_label}__succ__pos{additional_label}"))
                 elif "Lunar" in env_name and reward == -100 and done:
                     alergia_sample.append(
-                        (action_map[int(action)], f"{cluster_label}__bad"))
+                        (action_map[int(action)], f"{cluster_label}__bad{additional_label}"))
                 elif "Lunar" in env_name and reward >= 10 and done:
                     alergia_sample.append(
-                        (action_map[int(action)], f"{cluster_label}__pos"))
+                        (action_map[int(action)], f"{cluster_label}__pos{additional_label}"))
                 elif "Lunar" in env_name and reward >= 10 and done:
                     alergia_sample.append(
-                        (action_map[int(action)], f"{cluster_label}__pos"))
+                        (action_map[int(action)], f"{cluster_label}__pos{additional_label}"))
                 elif "Mountain" in env_name and done and len(alergia_sample) < 200:
                     alergia_sample.append(
                         (action_map[int(action)], f"{cluster_label}__succ"))

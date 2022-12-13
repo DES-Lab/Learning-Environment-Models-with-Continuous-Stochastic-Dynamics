@@ -16,6 +16,22 @@ from utils import load, save, save_samples_to_file, get_traces_from_policy
 import graphviz
 from sklearn import tree
 
+def remove_features(x):
+    transformed = np.zeros((x.shape[0],3))
+    # transformed[:x.shape[0], :x.shape[1]] = x
+    transformed[:, 0] = x[:, 0]
+    transformed[:, 1] = x[:, 1]
+    transformed[:, 2] = x[:, 4]
+
+    return transformed
+
+def change_features(x):
+    transformed = np.zeros((x.shape[0],3))
+    transformed[:, 0] = x[:, 0] + x[:,2]
+    transformed[:, 1] = x[:, 1] + x[:,3]
+    transformed[:, 2] = x[:, 4] + x[:,5]
+    return transformed
+
 def add_features(x):
     transformed = np.zeros((x.shape[0],x.shape[1] + 6))
     transformed[:x.shape[0], :x.shape[1]] = x
@@ -238,11 +254,11 @@ if __name__ == "__main__":
     action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
     num_traces_dt = 6000
     load_observations = True
-    max_leaf_nodes = 512
+    max_leaf_nodes = 256
     random_obs_pairs = [0, 0.1, 0.2, 0.3,0.4]
-    scale = False
+    scale = True
     if scale:
-        transformer = FunctionTransformer(add_features)
+        transformer = FunctionTransformer(change_features)
     else:
         transformer = FunctionTransformer()
     env = gym.make(env_name)
@@ -267,7 +283,7 @@ if __name__ == "__main__":
     evaluate_on_environment(env, dt, transformer, render=False)
     save(dt, f"dt_{env_name}_{num_traces_dt}_{max_leaf_nodes}_{scale}")
 
-    num_traces_env_learn =4600
+    num_traces_env_learn =1000
     trace_file = f"{env_name}_{num_traces_env_learn}_traces"
     traces = load(trace_file)
     if traces is None:
