@@ -10,11 +10,17 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler, Po
 from stable_baselines3 import DQN
 
 from agents import load_agent
-from dt_mdp_learning import add_features
 from utils import load, save
 import graphviz
 from sklearn import tree
 
+def change_features(x):
+    transformed = np.zeros((x.shape[0],3))
+    # transformed[:x.shape[0], :x.shape[1]] = x
+    transformed[:, 0] = x[:, 0] + x[:,2]
+    transformed[:, 1] = x[:, 1] + x[:,3]
+    transformed[:, 2] = x[:, 4] + x[:,5]
+    return transformed
 
 def add_more_features(x):
     transformed = np.zeros((x.shape[0],x.shape[1] + 6))
@@ -72,47 +78,48 @@ def get_observation_action_pairs(env, num_ep=1000):
 
     return observation_actions_pairs
 
+if __name__ == "__main__":
 
-env_name = "LunarLander-v2"
-action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
+    env_name = "LunarLander-v2"
+    action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 
-num_traces = 6000
-load_observations = True
+    num_traces = 6000
+    load_observations = True
 
-env = gym.make(env_name)
+    env = gym.make(env_name)
 
-if load_observations and os.path.exists(f'pickle_files/obs_actions_pairs_{num_traces}.pickle'):
-    obs_action_pairs = load(f'obs_actions_pairs_{num_traces}')
-    if obs_action_pairs:
-        print('Observation actions pairs loaded')
-else:
-    print('Computing observation action pairs')
-    obs_action_pairs = get_observation_action_pairs(env, num_traces)
-    save(obs_action_pairs, path=f'obs_actions_pairs_{num_traces}')
+    if load_observations and os.path.exists(f'pickle_files/obs_actions_pairs_{num_traces}.pickle'):
+        obs_action_pairs = load(f'obs_actions_pairs_{num_traces}')
+        if obs_action_pairs:
+            print('Observation actions pairs loaded')
+    else:
+        print('Computing observation action pairs')
+        obs_action_pairs = get_observation_action_pairs(env, num_traces)
+        save(obs_action_pairs, path=f'obs_actions_pairs_{num_traces}')
 
-x,y = [i[0] for i in obs_action_pairs], [i[1] for i in obs_action_pairs]
-x = np.array(x)
-y = np.array(y)
+    x,y = [i[0] for i in obs_action_pairs], [i[1] for i in obs_action_pairs]
+    x = np.array(x)
+    y = np.array(y)
 
-scaler = make_pipeline(
-    PolynomialFeatures(interaction_only=True)
-    #FunctionTransformer(add_more_features)) # PowerTransformer() #PCA(n_components=6) #None # StandardScaler()
-)
-if scaler is not None:
-    x = scaler.fit_transform(x)
-dt = tree.DecisionTreeClassifier(max_leaf_nodes=256) #, ccp_alpha=0.0001)
-dt.fit(x, y)
+    scaler = make_pipeline(
+        FunctionTransformer(change_features)
+        #FunctionTransformer(add_more_features)) # PowerTransformer() #PCA(n_components=6) #None # StandardScaler()
+    )
+    if scaler is not None:
+        x = scaler.fit_transform(x)
+    dt = tree.DecisionTreeClassifier(max_leaf_nodes=32) #, ccp_alpha=0.0001)
+    dt.fit(x, y)
 
-# copy_root = build_tree_copy(dt.tree_)
-# print(copy_root.to_string())
-print(dt.get_n_leaves())
-# to get a leaf if of leaf that meade the decision
-# df.apply(obs)
+    # copy_root = build_tree_copy(dt.tree_)
+    # print(copy_root.to_string())
+    print(dt.get_n_leaves())
+    # to get a leaf if of leaf that meade the decision
+    # df.apply(obs)
 
 
-evaluate_on_environment(env, dt, scaler, render=False)
-# exit()
-dot_data = tree.export_graphviz(dt)
-graph = graphviz.Source(dot_data)
-#
-graph.render()
+    evaluate_on_environment(env, dt, scaler, render=False)
+    # exit()
+    dot_data = tree.export_graphviz(dt)
+    graph = graphviz.Source(dot_data)
+    #
+    graph.render()

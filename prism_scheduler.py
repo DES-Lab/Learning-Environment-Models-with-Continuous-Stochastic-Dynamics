@@ -186,7 +186,8 @@ class ProbabilisticEnsembleScheduler:
         self.active_schedulers = dict()
         self.input_map = input_map
         self.count_misses = count_misses
-        self.max_misses = 5
+        self.max_misses = 300
+        self.max_schedulers = 5
 
     def set_max_state_size(self, max_state_size):
         self.max_state_size = max_state_size
@@ -219,6 +220,15 @@ class ProbabilisticEnsembleScheduler:
         #assert False
 
     def activate_scheduler(self,cluster_label,weighted_clusters):
+        if len(self.active_schedulers) >= self.max_schedulers:
+            most_misses = 0
+            to_delete = None
+            for label in self.active_schedulers.keys():
+                if self.active_schedulers[label][1] >= most_misses:
+                    most_misses = self.active_schedulers[label][1]
+                    to_delete = label
+            self.active_schedulers.pop(to_delete)
+
         if cluster_label not in self.active_schedulers.keys():
             if cluster_label not in self.scheduler_ensemble:
                 # find closest
@@ -259,7 +269,7 @@ class ProbabilisticEnsembleScheduler:
             else:
                 for input, preference in scheduler_preferences.items():
                     if self.count_misses:
-                        input_preferences[input] += preference * (1.0 / (misses+1))
+                        input_preferences[input] += preference * 0.8**misses#(1.0 / (misses+1))
                     else:
                         input_preferences[input] += preference
         if len(input_preferences) == 0:

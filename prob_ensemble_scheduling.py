@@ -60,12 +60,10 @@ def run_episode(env, agent, input_map, ensemble_scheduler : ProbabilisticEnsembl
         reward += rew
         conc_obs = orig_obs.reshape(1, -1).astype(float)
 
-        weighted_clusters = compute_weighted_clusters(conc_obs, clustering_function, nr_outputs)
-
         if scale:
             conc_obs = scaler.transform(conc_obs)
+        weighted_clusters = compute_weighted_clusters(conc_obs, clustering_function, nr_outputs)
         obs = f'c{clustering_function.predict(conc_obs)[0]}'
-
         ensemble_scheduler.step_to(action, weighted_clusters, obs)
         # env.render()
         if done:
@@ -81,7 +79,7 @@ def run_episode(env, agent, input_map, ensemble_scheduler : ProbabilisticEnsembl
             return reward, nr_agree/steps, reward > 1
 
 
-num_clusters = 256
+num_clusters = 400
 num_traces = 2300
 scale = True
 clustering_type = "k_means"
@@ -105,7 +103,7 @@ truly_probabilistic = True
 count_misses = False
 duplicate_action = False
 ensemble_name = f"ensemble_all_{environment}"
-sched_name = None # f"prob_sched_{ensemble_name}_{clustering_type}_{num_traces}_{scale}_{num_clusters}"
+sched_name = f"prob_sched_{ensemble_name}_{clustering_type}_{num_traces}_{scale}_{num_clusters}"
 ensemble_scheduler = load(sched_name)
 if ensemble_scheduler is None:
     mdp_ensemble = load_mdp_ensemble(environment, ensemble_name, num_clusters, num_traces, scale)
@@ -120,13 +118,18 @@ scaler = load(f'pipeline_scaler_{environment}_{num_traces}') if scale else None
 clustering_function = load(f'{environment}_{clustering_type}_scale_{scale}_{num_clusters}_{num_traces}')
 env = gym.make(environment)
 
-nr_test_episodes = 10
+nr_test_episodes = 2
 
-for truly_probabilistic in [True,False]:
+ensemble_scheduler.max_schedulers = 2
+ensemble_scheduler.max_misses = 300
+
     # for c_misses,n_outputs, state_size in [(False,6,2),(False,10,4)]:
-    for c_misses in [False,True]:
-        for n_outputs in range(2,120,5): #[6,10,18]:
-            for state_size in range(2,120,5): #[10,20]:
+for c_misses in [True,False]:
+    # [10,20]:
+    for n_outputs in range(2, 250, 20):
+        for state_size in range(2, 250,20): #[6,10,18]:
+
+            for truly_probabilistic in [True, False]:
                 print(f"T-Prob:{truly_probabilistic}, c-misses:{c_misses}, nr-out: {n_outputs}, states:{state_size}")
                 ensemble_scheduler.set_max_state_size(state_size)
                 ensemble_scheduler.count_misses = c_misses
@@ -144,5 +147,5 @@ for truly_probabilistic in [True,False]:
                 avg_reward /= nr_test_episodes
                 success_rate /= nr_test_episodes
                 avg_agreement /= nr_test_episodes
-                print(f"Reward: {avg_reward}, success: {success_rate}, agreement: {avg_agreement}")
+                print("Reward: {:.2f}, success: {:.2f}, agreement: {:.2f}".format(avg_reward,success_rate,avg_agreement))
 

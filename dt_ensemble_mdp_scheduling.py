@@ -9,7 +9,7 @@ from sklearn.preprocessing import FunctionTransformer
 from stable_baselines3 import DQN
 
 from agents import load_agent
-from dt_mdp_learning import build_tree_copy, add_features
+from dt_mdp_learning import build_tree_copy, add_features, change_features
 from ensemble_creation import load_ensemble
 from prism_scheduler import PrismInterface, ProbabilisticScheduler, ProbabilisticEnsembleScheduler
 from utils import load, save
@@ -126,14 +126,14 @@ def run_episode(env, agent, input_map, tree_copy, ensemble_scheduler : Probabili
             return reward, nr_agree/steps, reward > 1
 
 num_traces_dt = 6000
-max_leaves = 512
-num_traces = 4600
-scale = False
+max_leaves = 256
+num_traces = 1000
+scale = True
 ensemble_name = "ensemble_all"
 target_label = "succ"
 
 if scale:
-    transformer = FunctionTransformer(add_features)
+    transformer = FunctionTransformer(change_features)
 else:
     transformer = FunctionTransformer()
 
@@ -152,7 +152,7 @@ dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', D
 
 sched_name = f"prob_sched_{ensemble_name}_{num_traces_dt}_{num_traces}_{scale}_{max_leaves}"
 
-ensemble_scheduler = load(sched_name)
+ensemble_scheduler =  load(sched_name)
 if ensemble_scheduler is None:
     mdp_ensemble = load_mdp_ensemble(environment,ensemble_name, num_traces, scale, max_leaves)
     ensemble_scheduler = ProbabilisticEnsembleScheduler(mdp_ensemble,target_label,input_map,truly_probabilistic,
@@ -174,13 +174,16 @@ if tree_copy is None:
     tree_copy.compute_aux_information(dt.tree_)
     save(tree_copy,tree_copy_file_name)
 
-nr_test_episodes = 5
+nr_test_episodes = 10
 
-for truly_probabilistic in [True,False]:
+ensemble_scheduler.max_schedulers = 10
+ensemble_scheduler.max_misses = 300
+
+for truly_probabilistic in [False,True]:
     # for c_misses,n_outputs, state_size in [(False,6,2),(False,10,4)]:
     for c_misses in [False,True]:
-        for n_outputs in range(2,256,8): #[6,10,18]:
-            for state_size in range(2,256,8): #[10,20]:
+        for n_outputs in range(2,256,1): #[6,10,18]:
+            for state_size in range(144,256,2): #[10,20]:
                 print(f"T-Prob:{truly_probabilistic}, c-misses:{c_misses}, nr-out: {n_outputs}, states:{state_size}")
                 ensemble_scheduler.set_max_state_size(state_size)
                 ensemble_scheduler.count_misses = c_misses
