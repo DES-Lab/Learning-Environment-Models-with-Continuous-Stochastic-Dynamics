@@ -1,6 +1,8 @@
 import gym
 from stable_baselines3 import A2C, DQN, PPO, SAC, DDPG
 from sb3_contrib import TQC
+from stable_baselines3.common.type_aliases import Schedule
+
 from agents import load_agent, evaluate_agent
 
 
@@ -92,6 +94,7 @@ def get_mountaincar_agents_smc(evaluate=False):
 
     available_actions = [0, 1, 2]
     return agents, available_actions, env
+
 
 
 if __name__ == '__main__':
