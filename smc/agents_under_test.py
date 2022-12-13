@@ -20,10 +20,8 @@ def get_car_racing_agents(evaluate=False):
             # env = gym.wrappers.GrayScaleObservation(env, keep_dim=True)
 
             for name, agent in agents:
-                # TODO does not work
-                # ValueError: Error: Unexpected observation shape (1, 96, 96, 3) for Box environment, please use (2, 64, 64) or (n_env, 2, 64, 64) for the observation shape.
                 evaluate_agent(agent, name, env)
-        # 21
+
         return agents
 
 
@@ -97,4 +95,4 @@ def get_mountaincar_agents_smc(evaluate=False):
 
 
 if __name__ == '__main__':
-    get_bipedal_walker_agents(evaluate=True)
+    get_lunar_lander_agents_smc(evaluate=True)
