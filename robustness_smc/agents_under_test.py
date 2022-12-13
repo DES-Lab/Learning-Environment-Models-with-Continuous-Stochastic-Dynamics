@@ -1,30 +1,8 @@
 import gym
+from sb3_contrib import TQC, ARS
 from stable_baselines3 import A2C, DQN, PPO, SAC, DDPG
-from sb3_contrib import TQC
-from stable_baselines3.common.type_aliases import Schedule
 
 from agents import load_agent, evaluate_agent
-
-
-def get_car_racing_agents(evaluate=False):
-    # ppo_recurrent = load_agent('NikitaBaramiia/PPO-CarRacing-v0', 'ppo-CarRacing-v0.zip', PPO)
-    # ppo_recurrent2 = load_agent('sb3/ppo_lstm-CarRacing-v0', 'ppo_lstm-CarRacing-v0.zip', PPO)
-    ppo = load_agent('meln1k/ppo-CarRacing-v0', 'ppo-CarRacing-v0.zip', PPO)
-
-    agents = [('ppo', ppo), ]  # ('ppo_recurrent2', ppo_recurrent2), ]
-
-    if evaluate:
-        if evaluate:
-            print('Evaluating agents')
-
-            env = gym.make('CarRacing-v0')
-            # env = gym.wrappers.ResizeObservation(env, 64)
-            # env = gym.wrappers.GrayScaleObservation(env, keep_dim=True)
-
-            for name, agent in agents:
-                evaluate_agent(agent, name, env)
-
-        return agents
 
 
 def get_bipedal_walker_agents(evaluate=False):
@@ -42,7 +20,13 @@ def get_bipedal_walker_agents(evaluate=False):
         for name, agent in agents:
             evaluate_agent(agent, name, env)
 
-    return agents, 'bipedal_walker', env
+    def evaluate_obs(obs, rew, done, info, results_dict):
+        if rew == -100:
+            results_dict['crash'] += 1
+        elif rew == 300:
+            results_dict['goal'] += 1
+
+    return agents, 'continuous', env, evaluate_obs
 
 
 def get_lunar_lander_agents_smc(evaluate=False):
@@ -58,7 +42,16 @@ def get_lunar_lander_agents_smc(evaluate=False):
             evaluate_agent(agent, name, lunar_lander_env)
 
     available_actions = [0, 1, 2, 3]
-    return agents, available_actions, lunar_lander_env
+
+    def evaluate_obs(obs, rew, done, info, results_dict):
+        if rew == 100:
+            results_dict['goal'] += 1
+        elif rew == -100:
+            results_dict['crash'] += 1
+        else:
+            results_dict['timeout'] += 1
+
+    return agents, available_actions, lunar_lander_env, evaluate_obs
 
 
 def get_cartpole_agents_smc(evaluate=False):
@@ -74,7 +67,11 @@ def get_cartpole_agents_smc(evaluate=False):
             evaluate_agent(agent, name, env)
 
     available_actions = [0, 1]
-    return agents, available_actions, env
+
+    def evaluate_obs(obs, rew, done, info, results_dict):
+        pass
+
+    return agents, available_actions, env, evaluate_obs
 
 
 def get_mountaincar_agents_smc(evaluate=False):
@@ -93,9 +90,39 @@ def get_mountaincar_agents_smc(evaluate=False):
             evaluate_agent(agent, name, env)
 
     available_actions = [0, 1, 2]
-    return agents, available_actions, env
+
+    def evaluate_obs(obs, rew, done, info, results_dict):
+        if info['ep_len'] == 200:
+            results_dict['timeout'] += 1
+
+    return agents, available_actions, env, evaluate_obs
+
+
+def get_walker2d_agents_smc(evaluate=False):
+    tqc_agent = load_agent('sb3/tqc-Walker2d-v3', 'tqc-Walker2d-v3.zip', TQC)
+    ars_agent = load_agent('sb3/ars-Walker2d-v3', 'ars-Walker2d-v3.zip', ARS)
+
+    agents = [('tqc_agent', tqc_agent), ('ars_agent', ars_agent), ()]
+    env = gym.make('Walker2d-v3')
+
+    if evaluate:
+        print('Evaluating agents')
+        for name, agent in agents:
+            evaluate_agent(agent, name, env)
+
+    available_actions = 'continuous'
+
+    def evaluate_obs(obs, rew, done, info, results_dict):
+        if info['ep_len'] == 1000:
+            results_dict['goal'] += 1
+        else:
+            results_dict['crash'] += 1
+
+    return agents, available_actions, env, evaluate_obs
 
 
 
 if __name__ == '__main__':
-    get_lunar_lander_agents_smc(evaluate=True)
+    get_walker2d_agents_smc(evaluate=True)
+
+

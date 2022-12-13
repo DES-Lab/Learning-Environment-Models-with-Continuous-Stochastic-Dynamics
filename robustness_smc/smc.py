@@ -1,42 +1,41 @@
 import pickle
-from collections import defaultdict
-from itertools import product
+from collections import defaultdict, Counter
+from itertools import product, cycle
 from random import choice
 from statistics import mean
 
 from tqdm import tqdm
 
 # pip install ufal.pybox2d
-from robustness_smc.agents_under_test import get_lunar_lander_agents_smc, get_cartpole_agents_smc, get_mountaincar_agents_smc, \
-    get_bipedal_walker_agents
+from robustness_smc.agents_under_test import *
 
 
-def smc(agent, env, num_optimal_moves, num_random_moves, agent_name, available_actions, num_runs=300, render=False):
-    goal_reached, crash, time_out, rewards = 0, 0, 0, []
+def smc(agent, env, num_policy_moves, num_random_moves, agent_name, available_actions, evaluate_obs, num_runs=300, render=False):
+    episode_rewards = []
+    results_dict = Counter()
+
+    action_sequance = ['policy' for _ in range(num_policy_moves)]
+    action_sequance.extend(['random' for _ in range(num_random_moves)])
 
     for _ in tqdm(range(num_runs)):
         obs = env.reset()
 
-        optimal_counter = 0
-        random_counter = 0
         episode_reward = 0
 
         previous_actions = []
+
+        action_cycle = cycle(action_sequance)
+
+        episode_step_counter = 0
         while True:
+            episode_step_counter = 0
             action, _ = agent.predict(obs)
 
-            if available_actions == 'bipedal_walker':
+            if available_actions == 'continuous':
                 previous_actions.append(action)
 
-            if optimal_counter < num_optimal_moves:
-                optimal_counter += 1
-            else:
-                random_counter += 1
-                if random_counter == num_random_moves:
-                    optimal_counter = 0
-                    random_counter = 0
-
-                if available_actions != 'bipedal_walker':
+            if next(action_cycle) == 'random':
+                if available_actions != 'continuous':
                     non_optimal_actions = available_actions.copy()
                     non_optimal_actions.remove(action)
                     action = choice(non_optimal_actions)
@@ -47,36 +46,34 @@ def smc(agent, env, num_optimal_moves, num_random_moves, agent_name, available_a
 
             obs, reward, done, info = env.step(action)
             episode_reward += reward
+
             if render:
                 env.render()
 
             if done:
-                rewards.append(episode_reward)
-                if reward == 100:
-                    goal_reached += 1
-                elif reward == -100:
-                    crash += 1
-                else:
-                    time_out += 1
+                episode_rewards.append(episode_reward)
+                info['ep_len'] = episode_step_counter
+                evaluate_obs(obs, reward, done, info, results_dict)
 
                 break
 
-    goal_reached = round(goal_reached / num_runs * 100, 2)
-    crash = round(crash / num_runs * 100, 2)
-    time_out = round(time_out / num_runs * 100, 2)
+    goal_reached = round(results_dict['goal'] / num_runs * 100, 2)
+    crash = round(results_dict['crash'] / num_runs * 100, 2)
+    time_out = round(results_dict['timeout'] / num_runs * 100, 2)
+
     print('--------------------------------------------------------------------------------------')
     print(f'Agent: {agent_name}')
-    print(f'SMC Statistics for {num_optimal_moves, num_random_moves} configuration.')
+    print(f'SMC Statistics for {num_policy_moves, num_random_moves} configuration.')
     print(f'Goal       : {goal_reached}')
     print(f'Crash      : {crash}')
     print(f'Time-out   : {time_out}')
 
-    print(f'Mean Reward: {mean(rewards)}')
+    print(f'Mean Reward: {mean(episode_rewards)}')
 
-    return goal_reached, crash, time_out, mean(rewards)
+    return goal_reached, crash, time_out, mean(episode_rewards)
+
 
 if __name__ == '__main__':
-
 
     num_policy_steps = list(range(10, 60, 10))
     num_random_steps = list(range(1, 11, 2))
@@ -84,14 +81,16 @@ if __name__ == '__main__':
     experiment_configs = list(product(num_policy_steps, num_random_steps))
 
     # experiment_configs = [(10, 1), (20, 1),] #  (30, 1), (50, 5), (50, 10)
-    agent_configs, available_actions, env = get_bipedal_walker_agents()
+    agent_configs, available_actions, env, evaluate_obs_fun = get_bipedal_walker_agents()
 
     experiment_results = defaultdict(dict)
 
     for num_policy_moves, num_random_moves in experiment_configs:
         for agent_name, agent in agent_configs:
-            data = smc(agent, env, num_optimal_moves=num_policy_moves, num_random_moves=num_random_moves,
-                       available_actions=available_actions, agent_name=agent_name, num_runs=200)
+            data = smc(agent, env,
+                       num_policy_moves=num_policy_moves, num_random_moves=num_random_moves,
+                       available_actions=available_actions, evaluate_obs=evaluate_obs_fun,
+                       agent_name=agent_name, num_runs=10)
             experiment_results[agent_name][(num_policy_moves, num_random_moves)] = data
 
     with open('smc_bipedal_walker.pickle', 'wb') as handle:

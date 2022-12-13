@@ -83,7 +83,7 @@ def plot_reward_only(path_to_pickle, exp_name):
             plt.close()
 
 
-plot_reward_only(path_to_pickle='smc_mountain_car.pickle', exp_name='MountainCar')
+plot_reward_only(path_to_pickle='smc_bipedal_walker.pickle', exp_name='MountainCar')
 
 # plot_lunar_lander()
 exit()
