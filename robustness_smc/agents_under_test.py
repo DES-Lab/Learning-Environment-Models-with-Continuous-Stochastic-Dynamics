@@ -1,3 +1,5 @@
+from statistics import mean
+
 import gym
 from sb3_contrib import TQC, ARS
 from stable_baselines3 import A2C, DQN, PPO, SAC, DDPG
@@ -100,9 +102,9 @@ def get_mountaincar_agents_smc(evaluate=False):
 
 def get_walker2d_agents_smc(evaluate=False):
     tqc_agent = load_agent('sb3/tqc-Walker2d-v3', 'tqc-Walker2d-v3.zip', TQC)
-    ars_agent = load_agent('sb3/ars-Walker2d-v3', 'ars-Walker2d-v3.zip', ARS)
+    sac_agent = load_agent('sb3/sac-Walker2d-v3', 'sac-Walker2d-v3.zip', SAC)
 
-    agents = [('tqc_agent', tqc_agent), ('ars_agent', ars_agent), ()]
+    agents = [('tqc_agent', tqc_agent), ('sac_agent', sac_agent), ]
     env = gym.make('Walker2d-v3')
 
     if evaluate:
@@ -113,16 +115,12 @@ def get_walker2d_agents_smc(evaluate=False):
     available_actions = 'continuous'
 
     def evaluate_obs(obs, rew, done, info, results_dict):
-        if info['ep_len'] == 1000:
+        if info['ep_len'] >= 900:
             results_dict['goal'] += 1
         else:
             results_dict['crash'] += 1
 
     return agents, available_actions, env, evaluate_obs
 
-
-
 if __name__ == '__main__':
     get_walker2d_agents_smc(evaluate=True)
-
-
