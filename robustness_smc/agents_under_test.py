@@ -1,7 +1,6 @@
-from statistics import mean
-
 import gym
-from sb3_contrib import TQC, ARS
+import numpy as np
+from sb3_contrib import TQC
 from stable_baselines3 import A2C, DQN, PPO, SAC, DDPG
 
 from agents import load_agent, evaluate_agent

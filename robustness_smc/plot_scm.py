@@ -7,6 +7,8 @@ plot_options = {'goal': 0, 'crash': 1, 'time_out': 2, 'reward': 3, 'episode_len'
 
 
 def plot_selected_categories(path_to_pickle, exp_name, categories):
+    mutation_type = 'action' if 'action' in path_to_pickle else 'observation'
+
     for el in categories:
         assert el in {'reward', 'goal', 'crash', 'time_out', 'episode_len'}
 
@@ -41,18 +43,18 @@ def plot_selected_categories(path_to_pickle, exp_name, categories):
 
             fig.set_xlabel('Policy Steps')
             fig.set_ylabel('Random Steps')
-            title = f'{exp_name} {agent} agent'
+            title = f'{exp_name}, {agent}, {mutation_type}'
             fig.set_title(
-                f'{title}: % {data_type} reached' if data_type != 'reward' else f'{title}: mean reward')
-            plt.savefig(f'plots/{exp_name}_{agent}_{data_type}.pdf', dpi=300)
+                f'{title}: {data_type} %' if data_type not in {'reward', 'episode_len'} else f'{title}: mean {data_type}')
+            plt.savefig(f'plots/{exp_name}_{agent}_{data_type}_mut_{mutation_type}.pdf', dpi=300)
             plt.close()
 
 
-experiments = [('smc_mountain_car.pickle', 'MountainCar', ['reward']),
-               ('smc_lunar_lander.pickle', 'LunarLander', ['reward', 'crash', 'goal', 'time_out']),
-               ('smc_cartpole.pickle', 'CartPole', ['goal']),
-               ('smc_bipedal_walker.pickle', 'BipedalWalker', ['reward', 'crash',]),
-               ('smc_walker2d.pickle', 'Walker2d', ['reward', 'crash', 'goal', 'episode_len' ]), ] # episode_len
+experiments = [('smc_mountain_car_action.pickle', 'MountainCar', ['reward']),
+               ('smc_lunar_lander_action.pickle', 'LunarLander', ['reward', 'crash', 'goal', 'time_out']),
+               ('smc_cartpole_action.pickle', 'CartPole', ['goal']),
+               ('smc_bipedal_walker_action.pickle', 'BipedalWalker', ['reward', 'crash',]),
+               ('smc_walker2d_action.pickle', 'Walker2d', ['reward', 'crash', 'goal', 'episode_len' ]), ] # episode_len
 
 for pickle_file, exp_name, plot_categories in experiments:
     plot_selected_categories(pickle_file, exp_name, plot_categories)
