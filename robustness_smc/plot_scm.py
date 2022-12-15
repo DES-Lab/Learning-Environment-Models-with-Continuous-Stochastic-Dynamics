@@ -50,11 +50,17 @@ def plot_selected_categories(path_to_pickle, exp_name, categories):
             plt.close()
 
 
-experiments = [('smc_mountain_car_action.pickle', 'MountainCar', ['reward']),
-               ('smc_lunar_lander_action.pickle', 'LunarLander', ['reward', 'crash', 'goal', 'time_out']),
-               ('smc_cartpole_action.pickle', 'CartPole', ['goal']),
-               ('smc_bipedal_walker_action.pickle', 'BipedalWalker', ['reward', 'crash',]),
+experiments = [('smc_mountain_car_action.pickle', 'MountainCar', ['reward', 'episode_len']),
+               ('smc_lunar_lander_action.pickle', 'LunarLander', ['reward', 'crash', 'goal', 'time_out', 'episode_len']),
+               ('smc_cartpole_action.pickle', 'CartPole', ['goal', 'episode_len']),
+               ('smc_bipedal_walker_action.pickle', 'BipedalWalker', ['reward', 'crash', 'episode_len']),
                ('smc_walker2d_action.pickle', 'Walker2d', ['reward', 'crash', 'goal', 'episode_len' ]), ] # episode_len
+experiments.extend([('smc_mountain_car_observation.pickle', 'MountainCar', ['reward', 'episode_len']),
+               ('smc_lunar_lander_observation.pickle', 'LunarLander', ['reward', 'crash', 'goal', 'time_out', 'episode_len']),
+               ('smc_cartpole_observation.pickle', 'CartPole', ['goal', 'episode_len']),
+               ('smc_bipedal_walker_observation.pickle', 'BipedalWalker', ['reward', 'crash', 'episode_len']),
+               ('smc_walker2d_observation.pickle', 'Walker2d', ['reward', 'crash', 'goal', 'episode_len' ]),] ) # episode_len
+
 
 for pickle_file, exp_name, plot_categories in experiments:
     plot_selected_categories(pickle_file, exp_name, plot_categories)
