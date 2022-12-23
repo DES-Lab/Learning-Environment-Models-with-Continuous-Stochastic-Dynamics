@@ -83,6 +83,12 @@ def compute_weighted_outs(tree_copy, obs, possible_outs, nr_outs):
     #         # weighted_outputs[label] = (weighted_outputs[label] / weight_sum)
     return weighted_outputs
 
+
+def compute_initial_weighted_outs(tree_copy, ensemble_scheduler:ProbabilisticEnsembleScheduler, predicted_obs):
+    scheduler_obs = list(ensemble_scheduler.scheduler_ensemble.keys())
+    return compute_weighted_outs(tree_copy,predicted_obs,scheduler_obs,len(scheduler_obs))
+
+
 def run_episode(env, agent, input_map, tree_copy, ensemble_scheduler : ProbabilisticEnsembleScheduler,
                 dt, transformer, nr_outputs):
     nr_agree = 0
@@ -92,7 +98,7 @@ def run_episode(env, agent, input_map, tree_copy, ensemble_scheduler : Probabili
     conc_obs = transformer.transform(conc_obs)
     obs = f'c{dt.apply(conc_obs)[0]}'
 
-    weighted_clusters = {obs : 1} #compute_weighted_outs(conc_obs,dt,possible_outs)
+    weighted_clusters = compute_initial_weighted_outs(tree_copy, ensemble_scheduler, obs)
     ensemble_scheduler.reset()
     ensemble_scheduler.activate_scheduler(obs,weighted_clusters)
     # prism_interface.step_to('right_engine', obs)
@@ -121,16 +127,17 @@ def run_episode(env, agent, input_map, tree_copy, ensemble_scheduler : Probabili
         possible_outs = ensemble_scheduler.possible_outputs(action)
         weighted_clusters = compute_weighted_outs(tree_copy, obs,possible_outs, nr_outputs)
         ensemble_scheduler.step_to(action, weighted_clusters, obs)
-        env.render()
+        # env.render()
         if done:
             return reward, nr_agree/steps, reward > 1
 
 num_traces_dt = 6000
 max_leaves = 256
-num_traces = 1000
+num_traces = 2000
 scale = True
 ensemble_name = "ensemble_all"
 target_label = "succ"
+environment = "LunarLander-v2"
 
 if scale:
     transformer = FunctionTransformer(change_features)
@@ -140,17 +147,20 @@ else:
 import sys
 sys.setrecursionlimit(2000)
 
-environment = 'LunarLander-v2'
 aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.7-linux64/bin/prism"
 agent_steps = 0
 truly_probabilistic = True
 max_state_size = 10
 count_misses = False
-action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
+if environment == "LunarLander-v2":
+    dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
+    action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
+else:
+    dqn_agent = load_agent('DBusAI/DQN-MountainCar-v0-v2', 'DQN-MountainCar-v0.zip', DQN)
+    action_map = {0: 'left', 1: 'no_action', 2: 'right'}
 input_map = {v: k for k, v in action_map.items()}
-dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 
-sched_name = f"prob_sched_{ensemble_name}_{num_traces_dt}_{num_traces}_{scale}_{max_leaves}"
+sched_name = f"prob_sched_{environment}_{ensemble_name}_{num_traces_dt}_{num_traces}_{scale}_{max_leaves}"
 
 ensemble_scheduler =  load(sched_name)
 if ensemble_scheduler is None:
@@ -159,7 +169,7 @@ if ensemble_scheduler is None:
                                                         max_state_size,count_misses)
     save(ensemble_scheduler, sched_name)
 
-ensemble_scheduler.max_misses = 10
+ensemble_scheduler.max_misses = 300
 ensemble_scheduler.set_max_state_size(max_state_size)
 ensemble_scheduler.count_misses = count_misses
 ensemble_scheduler.truly_probabilistic = truly_probabilistic
@@ -174,16 +184,16 @@ if tree_copy is None:
     tree_copy.compute_aux_information(dt.tree_)
     save(tree_copy,tree_copy_file_name)
 
-nr_test_episodes = 10
+nr_test_episodes = 5
 
-ensemble_scheduler.max_schedulers = 10
+ensemble_scheduler.max_schedulers = 20
 ensemble_scheduler.max_misses = 300
 
 for truly_probabilistic in [False,True]:
     # for c_misses,n_outputs, state_size in [(False,6,2),(False,10,4)]:
-    for c_misses in [False,True]:
-        for n_outputs in range(2,256,1): #[6,10,18]:
-            for state_size in range(144,256,2): #[10,20]:
+    for c_misses in [True,False]:
+        for n_outputs in range(2,48,4): #[6,10,18]:
+            for state_size in range(2,48,4): #[10,20]:
                 print(f"T-Prob:{truly_probabilistic}, c-misses:{c_misses}, nr-out: {n_outputs}, states:{state_size}")
                 ensemble_scheduler.set_max_state_size(state_size)
                 ensemble_scheduler.count_misses = c_misses

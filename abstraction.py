@@ -50,7 +50,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     # scaler = PowerTransformer()
     # scaler.fit(observation_space)
     # save(scaler, f'power_scaler_{env_name}_{num_traces}')
-    scaler = make_pipeline(FunctionTransformer(change_features_clustering))
+    scaler = make_pipeline(PowerTransformer())
     scaler.fit(observation_space)
     save(scaler, f'pipeline_scaler_{env_name}_{num_traces}')
 
@@ -113,12 +113,12 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
                 elif "Lunar" in env_name and reward >= 10 and done:
                     alergia_sample.append(
                         (action_map[int(action)], f"{cluster_label}__pos{additional_label}"))
-                elif "Mountain" in env_name and done and len(alergia_sample) < 200:
+                elif "Mountain" in env_name and done and len(alergia_sample) < 200 and state[0][0] > 0:
                     alergia_sample.append(
                         (action_map[int(action)], f"{cluster_label}__succ"))
                 else:
                     alergia_sample.append(
-                        (action_map[int(action)], cluster_label if not done else 'DONE'))  # action_map[int(action)]
+                        (action_map[int(action)], f"{cluster_label}{additional_label}" if not done else 'DONE'))  # action_map[int(action)]
 
             dataset.append(alergia_sample)
         alergia_datasets.append(dataset)

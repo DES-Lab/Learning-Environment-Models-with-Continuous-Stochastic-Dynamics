@@ -177,11 +177,12 @@ class ProbabilisticScheduler:
         return True
 class ProbabilisticEnsembleScheduler:
     def __init__(self,mdp_ensemble : Dict[str,Mdp], target_label, input_map, truly_probabilistic, max_state_size,
-                 count_misses):
+                 count_misses, maximize=True):
         self.mdp_ensemble = mdp_ensemble
         self.target_label = target_label
         self.max_state_size = max_state_size
         self.truly_probabilistic = truly_probabilistic
+        self.maximize = maximize
         self.scheduler_ensemble = self.compute_schedulers(mdp_ensemble)
         self.active_schedulers = dict()
         self.input_map = input_map
@@ -200,11 +201,12 @@ class ProbabilisticEnsembleScheduler:
             print(f"Initialized scheduler for {cluster_label}")
             mdp = mdp_ensemble[cluster_label]
             try:
-                prism_interface = PrismInterface(self.target_label, mdp)
+                prism_interface = PrismInterface(self.target_label, mdp, maximize=self.maximize)
                 schedulers[cluster_label] = ProbabilisticScheduler(prism_interface.scheduler, self.truly_probabilistic,
                                                                max_state_size=self.max_state_size)
-            except:
+            except Exception as e:
                 print(f"Did not compute scheduler for {cluster_label}")
+                print(e)
         return schedulers
 
     def reset(self):
@@ -224,10 +226,11 @@ class ProbabilisticEnsembleScheduler:
             most_misses = 0
             to_delete = None
             for label in self.active_schedulers.keys():
-                if self.active_schedulers[label][1] >= most_misses:
+                if self.active_schedulers[label][1] > most_misses:
                     most_misses = self.active_schedulers[label][1]
                     to_delete = label
-            self.active_schedulers.pop(to_delete)
+            if to_delete:
+                self.active_schedulers.pop(to_delete)
 
         if cluster_label not in self.active_schedulers.keys():
             if cluster_label not in self.scheduler_ensemble:
@@ -269,15 +272,17 @@ class ProbabilisticEnsembleScheduler:
             else:
                 for input, preference in scheduler_preferences.items():
                     if self.count_misses:
-                        input_preferences[input] += preference * 0.8**misses#(1.0 / (misses+1))
+                        input_preferences[input] += preference * 0.5**misses #(1.0 / (misses+1))
                     else:
                         input_preferences[input] += preference
         if len(input_preferences) == 0:
             print("Don't know any good input")
             return random.choice(list(self.input_map.keys()))
-        # print(input_preferences)
         (inputs, weights) = zip(*list(input_preferences.items()))
-        # weights = list(map(lambda x : x**2,weights))
+        if sum(weights) == 0:
+            print("Don't know any good input")
+            return random.choice(list(self.input_map.keys()))
+        # print(input_preferences)
         if self.truly_probabilistic:
             return random.choices(inputs, weights=weights)[0]
         else:

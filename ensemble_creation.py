@@ -97,6 +97,7 @@ def load_ensemble(saved_path_prefix='ensemble', input_completeness='sink_state')
     for file in os.listdir('learned_models'):
         if file.startswith(saved_path_prefix):
             ensemble_files.append(file)
+
     for f in ensemble_files:
         cluster_label = f[len(saved_path_prefix) + 1:][:-4]
         print(cluster_label)
@@ -112,7 +113,7 @@ def load_ensemble(saved_path_prefix='ensemble', input_completeness='sink_state')
 if __name__ == '__main__':
     env_name = "LunarLander-v2"
     # env_name = "MountainCar-v0"
-    num_traces = 2300
+    num_traces = 15000
 
     env = gym.make(env_name)
 
@@ -124,7 +125,7 @@ if __name__ == '__main__':
         action_map = {0: 'left', 1: 'no_action', 2: 'right'}
 
     trace_file = f"{env_name}_{num_traces}_traces"
-    num_clusters = 256
+    num_clusters = 512
     scale = True
     traces = load(trace_file)
     if traces is None:
@@ -137,8 +138,8 @@ if __name__ == '__main__':
     alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, env_name, include_reward=False,
                                                                    n_clusters=num_clusters,clustering_type="k_means",
                                                                    scale=scale,)[0]
-    compute_ensemble_mdp(alergia_traces,suffix_strategy="all",optimize_for="accuracy",input_completeness="sink_state",alergia_eps=0.005,
-                         save_path_prefix=f"ensemble_all_{env_name}_{num_traces}_scale_{scale}_k_means_{num_clusters}",
+    compute_ensemble_mdp(alergia_traces,suffix_strategy="all_nonconsec",optimize_for="accuracy",input_completeness="sink_state",alergia_eps=0.005,
+                         save_path_prefix=f"ensemble_all_nonconsec_{env_name}_{num_traces}_scale_{scale}_k_means_{num_clusters}",
                          depth=3, nr_traces_limit = 30000)
     # compute_ensemble_mdp(alergia_traces,suffix_strategy"longest", save_path_prefix="ensemble_14k",depth = 5, nr_traces_limit = 25000)
 

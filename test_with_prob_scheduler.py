@@ -10,8 +10,8 @@ from sklearn.metrics import euclidean_distances
 from utils import load
 
 num_traces = 46000
-num_clusters = 64
-scale = False
+num_clusters = 512
+scale = True
 include_reward = False
 environment = 'LunarLander-v2'
 aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.7-linux64/bin/prism"
@@ -30,7 +30,7 @@ scheduler = ProbabilisticScheduler(prism_interface.scheduler,True)
 # input_map = {v: k for k, v in action_map.items()}
 
 clustering_function = load(f'k_means_scale_{scale}_{num_clusters}_{num_traces}')
-scaler = load(f"standard_scaler_{num_traces}")
+scaler = load(f"pipeline_scaler_{num_traces}")
 
 env = gym.make(environment)
 cluster_center_cache = dict()

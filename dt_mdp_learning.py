@@ -26,10 +26,11 @@ def remove_features(x):
     return transformed
 
 def change_features(x):
-    transformed = np.zeros((x.shape[0],3))
+    transformed = np.zeros((x.shape[0],4))
     transformed[:, 0] = x[:, 0] + x[:,2]
     transformed[:, 1] = x[:, 1] + x[:,3]
     transformed[:, 2] = x[:, 4] + x[:,5]
+    transformed[:, 3] = x[:, 6] + x[:,7]
     return transformed
 
 def add_features(x):
@@ -172,7 +173,7 @@ def map_dt_indexes_to_traces(traces,action_map,env_name,dt):
             elif "Lunar" in env_name and reward >= 10 and done:
                 alergia_sample.append(
                     (action_map[int(action)], f"{cluster_label}__pos"))
-            elif "Mountain" in env_name and done and len(alergia_sample) < 200:
+            elif "Mountain" in env_name and done and len(alergia_sample) < 200 and state[0][0] > 0:
                 alergia_sample.append(
                     (action_map[int(action)], f"{cluster_label}__succ"))
             else:
@@ -204,8 +205,7 @@ def evaluate_on_environment(env, dt,transformer, num_episodes=100, render=False)
     print('Mean reward:', mean(all_rewards))
 
 
-def get_observation_action_pairs(env, num_ep=1000, randomness_probs=[0]):
-    dqn_agent = load_agent("araffin/dqn-LunarLander-v2", 'dqn-LunarLander-v2.zip', DQN)
+def get_observation_action_pairs(env, dqn_agent, num_ep=1000, randomness_probs=[0]):
 
     sample_num = 0
     observation_actions_pairs = []
@@ -251,8 +251,8 @@ def create_dt(obs_action_pairs,transformer, max_leaf_nodes):
 
 if __name__ == "__main__":
     env_name = "LunarLander-v2"
-    action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
     num_traces_dt = 6000
+    num_traces_env_learn = 2000
     load_observations = True
     max_leaf_nodes = 256
     random_obs_pairs = [0, 0.1, 0.2, 0.3,0.4]
@@ -263,15 +263,6 @@ if __name__ == "__main__":
         transformer = FunctionTransformer()
     env = gym.make(env_name)
 
-    if load_observations and os.path.exists(f'pickle_files/obs_actions_pairs_{num_traces_dt}.pickle'):
-        obs_action_pairs = load(f'obs_actions_pairs_{num_traces_dt}')
-        if obs_action_pairs:
-            print('Observation actions pairs loaded')
-    else:
-        print('Computing observation action pairs')
-        obs_action_pairs = get_observation_action_pairs(env, num_traces_dt, randomness_probs=random_obs_pairs)
-        save(obs_action_pairs, path=f'obs_actions_pairs_{num_traces_dt}')
-
     if env_name == "LunarLander-v2":
         dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
         action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
@@ -279,11 +270,19 @@ if __name__ == "__main__":
         dqn_agent = load_agent('DBusAI/DQN-MountainCar-v0-v2', 'DQN-MountainCar-v0.zip', DQN)
         action_map = {0: 'left', 1: 'no_action', 2: 'right'}
 
+    if load_observations and os.path.exists(f'pickle_files/obs_actions_pairs_{env_name}_{num_traces_dt}.pickle'):
+        obs_action_pairs = load(f'obs_actions_pairs_{env_name}_{num_traces_dt}')
+        if obs_action_pairs:
+            print('Observation actions pairs loaded')
+    else:
+        print('Computing observation action pairs')
+        obs_action_pairs = get_observation_action_pairs(env, dqn_agent, num_traces_dt, randomness_probs=random_obs_pairs)
+        save(obs_action_pairs, path=f'obs_actions_pairs_{env_name}_{num_traces_dt}')
+
     dt = create_dt(obs_action_pairs,transformer,max_leaf_nodes=max_leaf_nodes)
     evaluate_on_environment(env, dt, transformer, render=False)
     save(dt, f"dt_{env_name}_{num_traces_dt}_{max_leaf_nodes}_{scale}")
 
-    num_traces_env_learn =1000
     trace_file = f"{env_name}_{num_traces_env_learn}_traces"
     traces = load(trace_file)
     if traces is None:
@@ -300,7 +299,7 @@ if __name__ == "__main__":
             transformed_trace.append((transformer.transform(obs),action,reward,done))
         transformed_traces.append(transformed_trace)
     traces = transformed_traces
-    alergia_traces =  map_dt_indexes_to_traces(traces,action_map,env_name,dt)
+    alergia_traces = map_dt_indexes_to_traces(traces,action_map,env_name,dt)
     compute_ensemble_mdp(alergia_traces,suffix_strategy="all",optimize_for="accuracy",
                          input_completeness="sink_state",alergia_eps=0.005,
                          save_path_prefix=f"dt_ensemble_all_{env_name}_{num_traces_env_learn}_scale_{scale}_{max_leaf_nodes}",
