@@ -83,7 +83,7 @@ class Scheduler:
         return list(set([action for prob, action, target_state in trans_from_current]))
 
 class ProbabilisticScheduler:
-    def __init__(self, scheduler : Scheduler, truly_probabilistic,max_state_size=6):
+    def __init__(self, scheduler : Scheduler, truly_probabilistic,max_state_size=2):
         self.scheduler_dict = scheduler.scheduler_dict
         self.initial_state = scheduler.initial_state
         self.transition_dict = scheduler.transition_dict

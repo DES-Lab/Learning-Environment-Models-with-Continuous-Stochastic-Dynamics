@@ -12,8 +12,29 @@ from aalpy.utils import load_automaton_from_file
 from sklearn.metrics import euclidean_distances
 from utils import load, append_samples_to_file
 
-num_traces = 3000
-num_clusters = 256
+
+def remove_nan(mdp):
+    changed = False
+    for s in mdp.states:
+        to_remove = []
+        for input in s.transitions.keys():
+            is_nan = False
+            for t in s.transitions[input]:
+                if math.isnan(t[1]):
+                    is_nan = True
+                    to_remove.append(input)
+                    break
+            if not is_nan:
+                if abs(sum(map(lambda t : t[1],s.transitions[input])) - 1) > 1e-6:
+                    to_remove.append(input)
+        for input in to_remove:
+            changed = True
+            s.transitions.pop(input)
+    return changed
+
+
+num_traces = 5000
+num_clusters = 512
 scale = True
 include_reward = False
 environment = 'LunarLander-v2'
@@ -26,16 +47,19 @@ else:
 
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 input_map = {v: k for k, v in action_map.items()}
-model = load_automaton_from_file(f'mdp_combined_scale_{scale}_{num_clusters}_{num_traces}.dot', 'mdp')
-model.make_input_complete(missing_transition_go_to='sink_state')
-prism_interface = PrismInterface(["succ"], model)
+
+jalergia_samples = 'alergiaSamples.txt'
+mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy', eps=0.00005)
+remove_nan(mdp)
+mdp.make_input_complete(missing_transition_go_to='sink_state')
+prism_interface = PrismInterface(["succ"], mdp)
 scheduler = ProbabilisticScheduler(prism_interface.scheduler,True)
 
 # action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 # input_map = {v: k for k, v in action_map.items()}
 
 clustering_function = load(f'{environment}_k_means_scale_{scale}_{num_clusters}_{num_traces}')
-scaler = load(f"pipeline_scaler_{environment}_{num_traces}")
+scaler = load(f"power_scaler_{environment}_{num_traces}")
 
 env = gym.make(environment)
 cluster_center_cache = dict()
@@ -73,31 +97,13 @@ nr_outputs = num_clusters
 
 model_refinements = 100
 n_traces_per_ref = 200
-jalergia_samples = 'alergiaSamples.txt'
 
 
-def remove_nan(mdp):
-    changed = False
-    for s in mdp.states:
-        to_remove = []
-        for input in s.transitions.keys():
-            is_nan = False
-            for t in s.transitions[input]:
-                if math.isnan(t[1]):
-                    is_nan = True
-                    to_remove.append(input)
-                    break
-            if not is_nan:
-                if abs(sum(map(lambda t : t[1],s.transitions[input])) - 1) > 1e-6:
-                    to_remove.append(input)
-        for input in to_remove:
-            changed = True
-            s.transitions.pop(input)
-    return changed
 
 for i in range(model_refinements):
     print(f"Model refinement {i}")
     traces_in_ref = []
+    rewards = []
     for j in range(n_traces_per_ref):
         print(f"Trace {j}")
         curr_trace = ['INIT']
@@ -138,12 +144,12 @@ for i in range(model_refinements):
             else:
                 conc_obs = obs
             conc_obs = conc_obs.reshape(1, -1).astype(float)
-
+            before_scale = conc_obs
             if scale:
                 conc_obs = scaler.transform(conc_obs)
 
             obs = f'c{clustering_function.predict(conc_obs)[0]}'
-            obs = add_to_label(obs,conc_obs[0][1],rew,done)
+            obs = add_to_label(obs,before_scale[0][1],rew,done)
             curr_trace.append((action,obs))
 
             weighted_clusters = compute_weighted_clusters(conc_obs, clustering_function, nr_outputs)
@@ -160,12 +166,16 @@ for i in range(model_refinements):
                 traces_in_ref.append(curr_trace)
                     # import time
                     # time.sleep(2)
+                rewards.append(reward)
                 print(f'Episode reward: {reward} after {curr_steps} steps')
                 if reward > 1:
                     print('Success', reward)
                 break
+    avg_reward = sum(rewards) / len(rewards)
+    std_dev = math.sqrt((1. / len(rewards)) * sum([(r - avg_reward) ** 2 for r in rewards]))
+    print(f"Average reward in iteration: {avg_reward} +/- {std_dev}")
     append_samples_to_file(traces_in_ref,jalergia_samples)
-    mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx4G', optimize_for='accuracy', eps=0.005)
+    mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy', eps=0.00005)
     remove_nan(mdp)
     mdp.make_input_complete(missing_transition_go_to='sink_state')
     prism_interface = PrismInterface(["succ"], mdp)

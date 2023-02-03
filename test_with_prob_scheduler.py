@@ -1,6 +1,9 @@
+import math
+
 import gym
 import aalpy.paths
 import numpy as np
+from aalpy.learning_algs import run_JAlergia
 from stable_baselines3 import DQN
 
 from agents import load_agent
@@ -9,7 +12,27 @@ from aalpy.utils import load_automaton_from_file
 from sklearn.metrics import euclidean_distances
 from utils import load
 
-num_traces = 46000
+# copied from other file
+def remove_nan(mdp):
+    changed = False
+    for s in mdp.states:
+        to_remove = []
+        for input in s.transitions.keys():
+            is_nan = False
+            for t in s.transitions[input]:
+                if math.isnan(t[1]):
+                    is_nan = True
+                    to_remove.append(input)
+                    break
+            if not is_nan:
+                if abs(sum(map(lambda t : t[1],s.transitions[input])) - 1) > 1e-6:
+                    to_remove.append(input)
+        for input in to_remove:
+            changed = True
+            s.transitions.pop(input)
+    return changed
+
+num_traces = 5000
 num_clusters = 512
 scale = True
 include_reward = False
@@ -21,16 +44,22 @@ if agent_steps > 0:
 else:
     dqn_agent = None
 
-model = load_automaton_from_file(f'mdp_combined_scale_{scale}_{num_clusters}_{num_traces}.dot', 'mdp')
+# model = load_automaton_from_file(f'mdp_combined_scale_{scale}_{num_clusters}_{num_traces}.dot', 'mdp')
+# model.make_input_complete(missing_transition_go_to='sink_state')
+
+jalergia_samples = 'alergiaSamples.txt'
+model = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx8G', optimize_for='accuracy', eps=0.00005)
+remove_nan(model)
 model.make_input_complete(missing_transition_go_to='sink_state')
+
 prism_interface = PrismInterface(["succ"], model)
 scheduler = ProbabilisticScheduler(prism_interface.scheduler,True)
 
-# action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
-# input_map = {v: k for k, v in action_map.items()}
+action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
+input_map = {v: k for k, v in action_map.items()}
 
-clustering_function = load(f'k_means_scale_{scale}_{num_clusters}_{num_traces}')
-scaler = load(f"pipeline_scaler_{num_traces}")
+clustering_function = load(f'{environment}_k_means_scale_{scale}_{num_clusters}_{num_traces}')
+scaler = load(f"pipeline_scaler_{environment}_{num_traces}")
 
 env = gym.make(environment)
 cluster_center_cache = dict()

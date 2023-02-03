@@ -52,7 +52,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     # save(scaler, f'power_scaler_{env_name}_{num_traces}')
     scaler = make_pipeline(PowerTransformer())
     scaler.fit(observation_space)
-    save(scaler, f'pipeline_scaler_{env_name}_{num_traces}')
+    save(scaler, f'power_scaler_{env_name}_{num_traces}')
 
     if reduce_dimensions:
         pca = PCA(n_components=4)
