@@ -6,6 +6,7 @@ import numpy as np
 from aalpy.learning_algs import run_JAlergia
 from stable_baselines3 import DQN
 
+from abstraction import create_label
 from agents import load_agent
 from prism_scheduler import PrismInterface, ProbabilisticScheduler, compute_weighted_clusters
 from aalpy.utils import load_automaton_from_file
@@ -33,8 +34,8 @@ def remove_nan(mdp):
     return changed
 
 
-num_traces = 5000
-num_clusters = 512
+num_traces = 2500
+num_clusters = 256
 scale = True
 include_reward = False
 environment = 'LunarLander-v2'
@@ -48,8 +49,9 @@ else:
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 input_map = {v: k for k, v in action_map.items()}
 
+alergia_eps = 0.05
 jalergia_samples = 'alergiaSamples.txt'
-mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy', eps=0.00005)
+mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy', eps=alergia_eps)
 remove_nan(mdp)
 mdp.make_input_complete(missing_transition_go_to='sink_state')
 prism_interface = PrismInterface(["succ"], mdp)
@@ -98,6 +100,24 @@ nr_outputs = num_clusters
 model_refinements = 100
 n_traces_per_ref = 200
 
+
+def create_labels_in_traces(traces_in_ref, env_name):
+    label_traces = []
+    nr_steps = 0
+    for trace in traces_in_ref:
+        label_trace = ['INIT']
+        nr_steps += 1
+        last_cluster = 0
+        for (i, (action, cluster_label_int, rew, done, state)) in enumerate(trace[1:]):
+            next_cluster_label_int = trace[i+1][1] if i < len(trace) else None
+            cluster_label = f'c{cluster_label_int}'
+            label = create_label(nr_steps, cluster_label, cluster_label_int, done, env_name, last_cluster,
+                                 next_cluster_label_int, rew, state)
+            last_cluster = cluster_label_int
+            label_trace.append((action, label))
+            last_cluster = cluster_label_int
+        label_traces.append(label_trace)
+    return label_traces
 
 
 for i in range(model_refinements):
@@ -148,9 +168,11 @@ for i in range(model_refinements):
             if scale:
                 conc_obs = scaler.transform(conc_obs)
 
-            obs = f'c{clustering_function.predict(conc_obs)[0]}'
-            obs = add_to_label(obs,before_scale[0][1],rew,done)
-            curr_trace.append((action,obs))
+            cluster_label_int = clustering_function.predict(conc_obs)[0]
+            obs = f'c{cluster_label_int}'
+            # obs = add_to_label(obs,before_scale[0][1],rew,done)
+            # label = (obs,before_scale[0][1],rew,done)
+            curr_trace.append((action,cluster_label_int,rew,done,before_scale))
 
             weighted_clusters = compute_weighted_clusters(conc_obs, clustering_function, nr_outputs)
             reached_state = scheduler.step_to(action, weighted_clusters)
@@ -171,11 +193,13 @@ for i in range(model_refinements):
                 if reward > 1:
                     print('Success', reward)
                 break
+
+    label_traces = create_labels_in_traces(traces_in_ref,environment)
     avg_reward = sum(rewards) / len(rewards)
     std_dev = math.sqrt((1. / len(rewards)) * sum([(r - avg_reward) ** 2 for r in rewards]))
     print(f"Average reward in iteration: {avg_reward} +/- {std_dev}")
-    append_samples_to_file(traces_in_ref,jalergia_samples)
-    mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy', eps=0.00005)
+    append_samples_to_file(label_traces,jalergia_samples)
+    mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy', eps=alergia_eps)
     remove_nan(mdp)
     mdp.make_input_complete(missing_transition_go_to='sink_state')
     prism_interface = PrismInterface(["succ"], mdp)
