@@ -54,7 +54,8 @@ jalergia_samples = 'alergiaSamples.txt'
 mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy', eps=alergia_eps)
 remove_nan(mdp)
 mdp.make_input_complete(missing_transition_go_to='sink_state')
-prism_interface = PrismInterface(["succ"], mdp)
+goal = "c250"
+prism_interface = PrismInterface([goal], mdp)
 scheduler = ProbabilisticScheduler(prism_interface.scheduler,True)
 
 # action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
@@ -124,6 +125,7 @@ for i in range(model_refinements):
     print(f"Model refinement {i}")
     traces_in_ref = []
     rewards = []
+    goal_freq = 0
     for j in range(n_traces_per_ref):
         print(f"Trace {j}")
         curr_trace = ['INIT']
@@ -184,12 +186,15 @@ for i in range(model_refinements):
                 # possible_outs = prism_interface.scheduler.poss_step_to(action)
                 # take_best_out(prism_interface, scaler, clustering_function, conc_obs, action,
                 #               possible_outs, scale)
-            if done:
+            if done or goal == obs:
                 traces_in_ref.append(curr_trace)
                     # import time
                     # time.sleep(2)
                 rewards.append(reward)
                 print(f'Episode reward: {reward} after {curr_steps} steps')
+                if goal == obs or (reward > 100 and goal == "succ"):
+                    print("Reached goal")
+                    goal_freq += 1
                 if reward > 1:
                     print('Success', reward)
                 break
@@ -198,10 +203,11 @@ for i in range(model_refinements):
     avg_reward = sum(rewards) / len(rewards)
     std_dev = math.sqrt((1. / len(rewards)) * sum([(r - avg_reward) ** 2 for r in rewards]))
     print(f"Average reward in iteration: {avg_reward} +/- {std_dev}")
+    print(f"Goal frequency: {goal_freq/len(rewards)}")
     append_samples_to_file(label_traces,jalergia_samples)
     mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy', eps=alergia_eps)
     remove_nan(mdp)
     mdp.make_input_complete(missing_transition_go_to='sink_state')
-    prism_interface = PrismInterface(["succ"], mdp)
+    prism_interface = PrismInterface([goal], mdp)
     scheduler = ProbabilisticScheduler(prism_interface.scheduler, True)
     traces_in_ref.clear()

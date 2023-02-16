@@ -79,9 +79,9 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     # scaler = make_pipeline(PCA(n_components=6))
     # scaler = make_pipeline(LDATransformer(observation_space,actions))
 
+    # this works
     scaler = make_pipeline(StandardScaler(), LDATransformer(observation_space, actions))
 
-    # scaler = make_pipeline(FastICA(n_components=4))
     # scaler = make_pipeline(PCA(n_components=4),PowerTransformer())
 
     scaler.fit(observation_space)
@@ -184,10 +184,10 @@ def create_label(nr_steps, cluster_label, cluster_label_int, done, env_name, las
     elif done:
         additional_labels.append("DONE")
 
-    if "Lunar" in env_name and state[0][1] < 0.1:
-        additional_labels.append("low")
-    if "Lunar" in env_name and abs(state[0][0]) < 0.5:
-        additional_labels.append("mid")
+    # if "Lunar" in env_name and state[0][1] < 0.1:
+    #     additional_labels.append("low")
+    # if "Lunar" in env_name and abs(state[0][0]) < 0.5:
+    #     additional_labels.append("mid")
     # if last_cluster != cluster_label_int:
     #     additional_labels.append("entry")
     # if cluster_label_int != next_cluster_label_int:
