@@ -83,7 +83,7 @@ class Scheduler:
         return list(set([action for prob, action, target_state in trans_from_current]))
 
 class ProbabilisticScheduler:
-    def __init__(self, scheduler : Scheduler, truly_probabilistic,max_state_size=2):
+    def __init__(self, scheduler : Scheduler, truly_probabilistic,max_state_size=4):
         self.scheduler_dict = scheduler.scheduler_dict
         self.initial_state = scheduler.initial_state
         self.transition_dict = scheduler.transition_dict
@@ -152,11 +152,16 @@ class ProbabilisticScheduler:
         succs = []
         # print("****"*20)
         for (s,certainty) in self.current_state:
+            # TODO trying
+            current_label = self.label_dict[s]
             possible_successors = self._poss_step_to(s,action)
             for (succ, labels,prob) in possible_successors:
                 for cluster in weighted_clusters.keys():
                     if cluster in labels:
-                        # print(f"Taken {cluster} with weight {weighted_clusters[cluster]}")
+                        # TODO trying
+                        # if ("entry" in labels and cluster not in current_label) or ("entry" in current_label
+                        # and "entry" not in labels) or ("entry" not in current_label and "entry" not in labels):
+                            # print(f"Taken {cluster} with weight {weighted_clusters[cluster]}")
                         cluster_weight = weighted_clusters[cluster] #math.exp(-weighted_clusters[cluster])
                         succs.append((succ, certainty*cluster_weight))
 

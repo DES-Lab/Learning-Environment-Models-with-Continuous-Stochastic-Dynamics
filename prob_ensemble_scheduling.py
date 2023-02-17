@@ -79,8 +79,8 @@ def run_episode(env, agent, input_map, ensemble_scheduler : ProbabilisticEnsembl
             return reward, nr_agree/steps, reward > 1
 
 
-num_clusters = 512
-num_traces = 15000
+num_clusters = 256
+num_traces = 5000
 scale = True
 clustering_type = "k_means"
 environment = 'LunarLander-v2'
