@@ -238,7 +238,7 @@ def train_nn(nn, optim, loss_criterion, train_data, test_data, num_epochs=100, s
             batch_loss.append(loss.item())
 
         with torch.no_grad():
-            nn.eval()
+            nn.display_examples()
             total, correct = 0, 0
             for test_inputs, test_labels in test_data:
                 output = nn(test_inputs)
