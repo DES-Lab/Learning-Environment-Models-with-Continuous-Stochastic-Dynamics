@@ -85,29 +85,30 @@ def evaluate(env, action_dict, clustering_function, scaler, history_window_size=
                 break
     print('Mean reward:', mean(all_rewards))
 
+if __name__ == '__main__':
 
-env_name = "LunarLander-v2"
+    env_name = "LunarLander-v2"
 
-num_traces = 100
-scale = False
-n_clusters = 512
-history_size = 10
+    num_traces = 100
+    scale = False
+    n_clusters = 512
+    history_size = 10
 
-env = gym.make(env_name)
+    env = gym.make(env_name)
 
-trace_file = f"{env_name}_{num_traces}_traces"
-traces = load(trace_file)
-if traces is None:
-    dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-    traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.01, 0.025, 0.05])]
-    save(traces, trace_file)
-print('Traces obtained')
+    trace_file = f"{env_name}_{num_traces}_traces"
+    traces = load(trace_file)
+    if traces is None:
+        dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
+        traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.01, 0.025, 0.05])]
+        save(traces, trace_file)
+    print('Traces obtained')
 
-alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, n_clusters=n_clusters, scale=scale, )[0]
+    alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, n_clusters=n_clusters, scale=scale, )[0]
 
-action_dict = compute_history_based_prediction(alergia_traces, max_history_len=history_size)
+    action_dict = compute_history_based_prediction(alergia_traces, max_history_len=history_size)
 
-cf = load(f'k_means_scale_{scale}_{n_clusters}_{num_traces}')
-scaler = load(f'standard_scaler_{num_traces}') if scale else None
+    cf = load(f'k_means_scale_{scale}_{n_clusters}_{num_traces}')
+    scaler = load(f'standard_scaler_{num_traces}') if scale else None
 
-evaluate(env, action_dict, cf, scaler, history_window_size=history_size, strategy='probabilistic_longest')
+    evaluate(env, action_dict, cf, scaler, history_window_size=history_size, strategy='probabilistic_longest')
