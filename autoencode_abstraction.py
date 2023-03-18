@@ -44,18 +44,19 @@ def remove_nan(mdp):
 
 
 class AE(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, round_accuracy=1):
         super().__init__()
+        self.round_accuracy = round_accuracy
 
         # Building an linear encoder with Linear
         # layer followed by Relu activation function
         # 784 ==> 9
         self.encoder = torch.nn.Sequential(
-            torch.nn.Linear(8, 64),
+            torch.nn.Linear(8, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(64, 32),
+            torch.nn.Linear(32, 64),
             torch.nn.ReLU(),
-            torch.nn.Linear(32, 16),
+            torch.nn.Linear(64, 16),
             torch.nn.ReLU(),
             torch.nn.Linear(16, 1),
         )
@@ -63,12 +64,11 @@ class AE(torch.nn.Module):
         self.decoder = torch.nn.Sequential(
             torch.nn.Linear(1, 16),
             torch.nn.ReLU(),
-            torch.nn.Linear(16, 32),
+            torch.nn.Linear(16, 64),
             torch.nn.ReLU(),
-            torch.nn.Linear(32, 64),
+            torch.nn.Linear(64, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(64, 8),
-            # torch.nn.Sigmoid()
+            torch.nn.Linear(32, 8),
         )
 
     def forward(self, x):
@@ -78,7 +78,7 @@ class AE(torch.nn.Module):
 
     def encode(self, x):
         out = self.encoder(x).item()
-        rounded = round(out, 1)
+        rounded = round(out, self.round_accuracy)
         out_str = str(rounded).replace('.', '_')
         if out < 0:
             out_str = str(abs(rounded)).replace('.', '_')
@@ -130,13 +130,14 @@ def create_alergia_sequances(model, traces):
             abstract_obs = model.encode(torch.tensor(obs))
             if done:
                 if reward == 100:
-                    goal_states.append(abstract_obs)
+                    abstract_obs = 'GOAL'
+                    # goal_states.append(abstract_obs)
                 if reward == -100:
                     abstract_obs = 'CRASH'
             seq.extend((action_map[int(action)], abstract_obs))
         alergia_sequances.append(seq)
 
-    return alergia_sequances, goal_states
+    return alergia_sequances, 'GOAL'
 
 
 def visualize_abstraction(model, traces):
@@ -156,6 +157,25 @@ def visualize_abstraction(model, traces):
     plt.show()
 
 
+def eval_nn(autoencoder, nn, num_ep=100, render=True):
+    all_rewards = []
+    for _ in range(num_ep):
+        obs = env.reset()
+        ep_rew = 0
+        while True:
+            ae_obs = autoencoder(torch.tensor(obs)).detach().numpy()
+            action, _ = nn.predict(ae_obs)
+            obs, rew, done, info = env.step(action)
+            if render:
+                env.render()
+            ep_rew += rew
+            if done:
+                all_rewards.append(ep_rew)
+                print('Episode reward:', ep_rew)
+                break
+    print('Mean reward:', mean(all_rewards))
+
+
 def test_with_scheduler(env, model, alergia_model, goal_states, num_episodes=100):
     prism_interface = PrismInterface(goal_states, alergia_model)
 
@@ -172,43 +192,15 @@ def test_with_scheduler(env, model, alergia_model, goal_states, num_episodes=100
 
         while True:
             action = scheduler.get_input()
-            print(action)
+            if action is None:  # TODO FIX
+                print('Scheduler could not compute an action')
+                break
+
             assert action is not None
             obs, rew, done, _ = env.step(input_map[action])
             env.render()
 
             abstract_obs = model.encode(torch.tensor(obs))
-
-            if done and rew == -100:
-                abstract_obs = 'CRASH'
-
-            reached_state = scheduler.step_to(action, abstract_obs)
-
-            if not reached_state:
-                encoder_output = model.get_approximation(abstract_obs)
-
-                min_distance, selected_node = None, None
-
-                for transitions in alergia_model.current_state.transitions.values():
-                    for node, _ in transitions:
-                        if not min_distance:
-                            min_distance = abs(model.get_approximation(node.output) - encoder_output)
-                            selected_node = node
-                        else:
-                            if 'sink_state' in node.output or 'CRASH' in node.output or 'GOAL' in node.output:
-                                continue
-                            node_distance = abs(model.get_approximation(node.output) - encoder_output)
-                            if min_distance > node_distance:
-                                selected_node = node
-                                min_distance = node_distance
-
-                assert selected_node
-
-                print(action, selected_node.output)
-                reached_state = scheduler.step_to(action, selected_node.output)
-                assert reached_state
-
-            alergia_model.step_to(action, reached_state)
 
             ep_rew += rew
 
@@ -217,13 +209,46 @@ def test_with_scheduler(env, model, alergia_model, goal_states, num_episodes=100
                 total_rewards.append(ep_rew)
                 break
 
+            # if done and rew == -100:
+            #     abstract_obs = 'CRASH'
+
+            reached_state = scheduler.step_to(action, abstract_obs)
+
+            if not reached_state:
+                encoder_output = model.get_approximation(abstract_obs)
+
+                min_distance, approximate_observation = None, None
+
+                for node, _ in alergia_model.current_state.transitions[action]:
+                    if not min_distance:
+                        min_distance = abs(model.get_approximation(node.output) - encoder_output)
+                        approximate_observation = node.output
+                    else:
+                        if 'sink_state' in node.output or 'CRASH' in node.output or 'GOAL' in node.output:
+                            continue
+                        node_distance = abs(model.get_approximation(node.output) - encoder_output)
+                        if min_distance > node_distance:
+                            approximate_observation = node.output
+                            min_distance = node_distance
+
+                assert approximate_observation
+                abstract_obs = approximate_observation
+                reached_state = scheduler.step_to(action, abstract_obs)
+                if not reached_state:
+                    print('ERR')
+                    break
+                assert reached_state
+
+            alergia_model.step_to(action, abstract_obs)
+            assert alergia_model.current_state.output in scheduler.label_dict[scheduler.current_state]
+
 
 #################################################
 def compute_history_based_prediction(alergia_traces, max_history_len=5):
     action_dict = defaultdict(dict)
     for trace in alergia_traces:
-        # TODO
-        trace_splits = [trace[j:j + i] for i in range(1, max_history_len + 1) for j in range(1, len(trace))]
+        trace = [trace[n:n + 2] for n in range(1, len(trace), 2)]
+        trace_splits = [trace[j:j + i] for i in range(1, max_history_len + 1) for j in range(len(trace))]
         # print(trace_splits)
         for split in trace_splits:
             clusters = tuple(c[1] for c in split)
@@ -267,6 +292,14 @@ def evaluate(env, action_dict, model,
              num_episodes=100,
              strategy='longest',
              render=True):
+    all_labels = set()
+    label_values = dict()
+    for x in action_dict.keys():
+        if len(x) == 1:
+            if x[0] not in {'GOAL', 'CRASH'}:
+                all_labels.add(x[0])
+                label_values[x[0]] = model.get_approximation(x[0])
+
     all_rewards = []
     for _ in range(num_episodes):
         obs = env.reset()
@@ -276,9 +309,24 @@ def evaluate(env, action_dict, model,
             history.append(model.encode(torch.tensor(obs)))
             history = history[-history_window_size:]
 
+            for index, h in enumerate(history):
+                if h not in all_labels:
+                    h_value = model.get_approximation(h)
+                    min_diff, selected = None, None
+                    for label, value in label_values.items():
+                        if min_diff is None:
+                            selected = label
+                            min_diff = abs(h_value - value)
+                        else:
+                            diff = abs(h_value - value)
+                            if diff < min_diff:
+                                selected = label
+                                min_diff = diff
+
+                    history[index] = selected
+
             abstract_action = choose_action(tuple(history), action_dict, based_on=strategy)
-            if not abstract_action:
-                break
+
             action = input_map[abstract_action]
             obs, rew, done, info = env.step(action)
             if render:
@@ -295,24 +343,28 @@ def evaluate(env, action_dict, model,
 
 env_name = "LunarLander-v2"
 
-num_traces = 10
+num_traces = 1000
+round_accuracy = 2
+num_epochs = 10
+batch_size = 64
+
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.6/bin/prism.bat"
 load_ae = True
 
 env = gym.make(env_name)
 
-trace_file = f"{env_name}_{num_traces}_traces"
+trace_file = f"{env_name}_{num_traces}_traces_no_rand"  # _no_rand is second set
 traces = load(trace_file)
 if traces is None:
     dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-    traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.01, 0.025, 0.05])]
+    traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0])]
     save(traces, trace_file)
 print('Traces obtained')
 
 traces = traces[0]
 
 # Model Initialization
-autoencoder = AE()
+autoencoder = AE(round_accuracy)
 
 # Validation using MSE Loss function
 loss_function = torch.nn.MSELoss()
@@ -325,16 +377,18 @@ for trace in traces:
     for obs, _, _, _ in trace:
         observations.append(torch.tensor(obs))
 
-train_loader = DataLoader(observations, batch_size=16)
+train_loader = DataLoader(observations, batch_size=batch_size)
 
 if load_ae and os.path.exists('autoencoder.pickle'):
     print('Autoencoded loaded')
     with open('autoencoder.pickle', 'rb') as handle:
         autoencoder = pickle.load(handle)
 else:
-    train(autoencoder, train_loader, 100, optimizer, loss_function)
+    train(autoencoder, train_loader, num_epochs, optimizer, loss_function)
     with open('autoencoder.pickle', 'wb') as handle:
         pickle.dump(autoencoder, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+autoencoder.round_accuracy = round_accuracy
 
 test_observations = random.choices(observations, k=3)
 display_examples(autoencoder, test_observations)
@@ -342,18 +396,21 @@ display_examples(autoencoder, test_observations)
 # visualize_abstraction(autoencoder, traces)
 # exit()
 
+dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
+eval_nn(autoencoder, dqn_agent)
+exit()
 alergia_traces, goal_states = create_alergia_sequances(autoencoder, traces)
 
-# action_dict = compute_history_based_prediction(alergia_traces, max_history_len=5)
+action_dict = compute_history_based_prediction(alergia_traces, max_history_len=1)
 #
-# evaluate(env, action_dict, autoencoder, strategy='longest')
+evaluate(env, action_dict, autoencoder, strategy='longest')
 
-alergia_model = run_JAlergia(alergia_traces, 'mdp', path_to_jAlergia_jar='alergia.jar')
+# alergia_model = run_JAlergia(alergia_traces, 'mdp', path_to_jAlergia_jar='alergia.jar')
 
-alergia_model.make_input_complete('sink_state')
+# alergia_model.make_input_complete('self_loop')
 
-remove_nan(alergia_model)
-#alergia_model.save('test_ae_model')
-#alergia_model.visualize()
+# remove_nan(alergia_model)
+# alergia_model.save('test_ae_model')
+# alergia_model.visualize(display_same_state_transitions=False)
 
-test_with_scheduler(env, autoencoder, alergia_model, goal_states)
+# test_with_scheduler(env, autoencoder, alergia_model, goal_states)
