@@ -23,7 +23,7 @@ if environment == 'LunarLander-v2':
 
 num_traces = 2500
 num_clusters = 256
-scale = True
+scale = 'ae'
 
 env = gym.make(environment, )
 traces_file_name = f'{environment}_{num_traces}_traces'

@@ -2,13 +2,14 @@ import math
 import os
 import pickle
 import random
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from statistics import mean
 
 import gym
 import torch
 import aalpy.paths
+from aalpy.automata import Mdp, MdpState
 from aalpy.learning_algs import run_Alergia, run_JAlergia
 from aalpy.utils import load_automaton_from_file
 from stable_baselines3 import DQN
@@ -48,23 +49,20 @@ class AE(torch.nn.Module):
         super().__init__()
         self.round_accuracy = round_accuracy
 
-        # Building an linear encoder with Linear
-        # layer followed by Relu activation function
-        # 784 ==> 9
         self.encoder = torch.nn.Sequential(
             torch.nn.Linear(8, 32),
             torch.nn.ReLU(),
             torch.nn.Linear(32, 64),
             torch.nn.ReLU(),
-            torch.nn.Linear(64, 16),
+            torch.nn.Linear(64, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(16, 1),
+            torch.nn.Linear(32, 4),
         )
 
         self.decoder = torch.nn.Sequential(
-            torch.nn.Linear(1, 16),
+            torch.nn.Linear(4, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(16, 64),
+            torch.nn.Linear(32, 64),
             torch.nn.ReLU(),
             torch.nn.Linear(64, 32),
             torch.nn.ReLU(),
@@ -287,6 +285,40 @@ def choose_action(obs, action_dict, based_on='confidence'):
     return chosen_action
 
 
+def create_counting_mdp(alergia_traces):
+    states = defaultdict(Counter)
+    initial_states = set()
+
+    for trace in alergia_traces:
+        for i in range(0, len(trace) - 2, 2):
+            obs, action, new_obs = trace[i], trace[i + 1], trace[i + 2]
+            states[obs][(action, new_obs)] += 1
+            initial_states.add(obs)
+
+    mdp_states_dict = dict()
+    state_counter = 0
+    for obs in states.keys():
+        mdp_states_dict[obs] = MdpState(state_id=f's{state_counter}', output=obs)
+        state_counter += 1
+
+    for obs, counter in states.items():
+        inputs_dict = defaultdict(Counter)
+        for (input, new_output), freq in counter.items():
+            inputs_dict[input][new_output] = freq
+
+        for i in inputs_dict.keys():
+            input_sum = sum(inputs_dict[i].values())
+            for new_obs, freq in inputs_dict[i].items():
+                if new_obs not in mdp_states_dict.keys():
+                    mdp_states_dict[new_obs] = MdpState(state_counter, new_obs)
+                    state_counter += 1
+                mdp_states_dict[obs].transitions[i].append((mdp_states_dict[new_obs], freq / input_sum))
+    mdp = Mdp(mdp_states_dict['INIT'], list(mdp_states_dict.values()))
+    mdp.make_input_complete('sink_state')
+    print(f'Counting MDP: {mdp.size}')
+    return mdp
+
+
 def evaluate(env, action_dict, model,
              history_window_size=5,
              num_episodes=100,
@@ -339,78 +371,95 @@ def evaluate(env, action_dict, model,
     print('Mean reward:', mean(all_rewards))
 
 
-#################################################
 
-env_name = "LunarLander-v2"
 
-num_traces = 1000
-round_accuracy = 2
-num_epochs = 10
-batch_size = 64
+if __name__ == '__main__':
 
-aalpy.paths.path_to_prism = "C:/Program Files/prism-4.6/bin/prism.bat"
-load_ae = True
+    #################################################
 
-env = gym.make(env_name)
+    env_name = "LunarLander-v2"
 
-trace_file = f"{env_name}_{num_traces}_traces_no_rand"  # _no_rand is second set
-traces = load(trace_file)
-if traces is None:
+    num_traces = 1000
+    round_accuracy = 0
+    num_epochs = 20
+    batch_size = 128
+
+    aalpy.paths.path_to_prism = "C:/Program Files/prism-4.6/bin/prism.bat"
+    load_ae = True
+
+    env = gym.make(env_name)
+
+    trace_file = f"{env_name}_{num_traces}_traces_no_rand"  # _no_rand is second set
+    traces = load(trace_file)
+    if traces is None:
+        dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
+        traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0])]
+        save(traces, trace_file)
+    print('Traces obtained')
+
+    traces = traces[0]
+
+    # Model Initialization
+    autoencoder = AE(round_accuracy)
+
+    # Validation using MSE Loss function
+    loss_function = torch.nn.MSELoss()
+
+    # Using an Adam Optimizer with lr = 0.1
+    optimizer = torch.optim.Adam(autoencoder.parameters())
+
+    observations = list()
+    for trace in traces:
+        for obs, _, _, _ in trace:
+            observations.append(torch.tensor(obs))
+
+    train_loader = DataLoader(observations, batch_size=batch_size)
+
+    if load_ae and os.path.exists('autoencoder.pickle'):
+        print('Autoencoded loaded')
+        with open('autoencoder.pickle', 'rb') as handle:
+            autoencoder = pickle.load(handle)
+    else:
+        train(autoencoder, train_loader, num_epochs, optimizer, loss_function)
+        with open('autoencoder.pickle', 'wb') as handle:
+            pickle.dump(autoencoder, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    autoencoder.round_accuracy = round_accuracy
+
+    test_observations = random.choices(observations, k=3)
+    display_examples(autoencoder, test_observations)
+
+    # visualize_abstraction(autoencoder, traces)
+    # exit()
+
     dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-    traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0])]
-    save(traces, trace_file)
-print('Traces obtained')
+    # eval_nn(autoencoder, dqn_agent, num_ep=5)
+    # exit()
+    alergia_traces, goal_states = create_alergia_sequances(autoencoder, traces)
 
-traces = traces[0]
+    e = create_counting_mdp(alergia_traces)
+    # e.visualize()
+    # exit()
 
-# Model Initialization
-autoencoder = AE(round_accuracy)
+    print('Testing with scheduler')
+    # test_with_scheduler(env, autoencoder, e, goal_states, num_episodes=10)
 
-# Validation using MSE Loss function
-loss_function = torch.nn.MSELoss()
+    # exit()
 
-# Using an Adam Optimizer with lr = 0.1
-optimizer = torch.optim.Adam(autoencoder.parameters())
+    action_dict = compute_history_based_prediction(alergia_traces, max_history_len=1)
+    #
+    print('Testing history based')
+    evaluate(env, action_dict, autoencoder, strategy='probabilistic_longest', num_episodes=10)
+    exit()
 
-observations = list()
-for trace in traces:
-    for obs, _, _, _ in trace:
-        observations.append(torch.tensor(obs))
+    alergia_model = run_JAlergia(alergia_traces, 'mdp', path_to_jAlergia_jar='alergia.jar')
 
-train_loader = DataLoader(observations, batch_size=batch_size)
+    alergia_model.make_input_complete('self_loop')
 
-if load_ae and os.path.exists('autoencoder.pickle'):
-    print('Autoencoded loaded')
-    with open('autoencoder.pickle', 'rb') as handle:
-        autoencoder = pickle.load(handle)
-else:
-    train(autoencoder, train_loader, num_epochs, optimizer, loss_function)
-    with open('autoencoder.pickle', 'wb') as handle:
-        pickle.dump(autoencoder, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    remove_nan(alergia_model)
+    # alergia_model.save('test_ae_model')
+    # alergia_model.visualize(display_same_state_transitions=False)
 
-autoencoder.round_accuracy = round_accuracy
+    alergia_model.visualize(display_same_state_transitions=False)
 
-test_observations = random.choices(observations, k=3)
-display_examples(autoencoder, test_observations)
-
-# visualize_abstraction(autoencoder, traces)
-# exit()
-
-dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-eval_nn(autoencoder, dqn_agent)
-exit()
-alergia_traces, goal_states = create_alergia_sequances(autoencoder, traces)
-
-action_dict = compute_history_based_prediction(alergia_traces, max_history_len=1)
-#
-evaluate(env, action_dict, autoencoder, strategy='longest')
-
-# alergia_model = run_JAlergia(alergia_traces, 'mdp', path_to_jAlergia_jar='alergia.jar')
-
-# alergia_model.make_input_complete('self_loop')
-
-# remove_nan(alergia_model)
-# alergia_model.save('test_ae_model')
-# alergia_model.visualize(display_same_state_transitions=False)
-
-# test_with_scheduler(env, autoencoder, alergia_model, goal_states)
+    test_with_scheduler(env, autoencoder, alergia_model, goal_states)

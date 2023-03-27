@@ -1,8 +1,12 @@
+import os
+import pickle
 import random
 
 import sklearn
+import torch
 from sklearn.manifold import TSNE
 from sklearn.pipeline import make_pipeline
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 import numpy as np
@@ -11,6 +15,7 @@ from sklearn.decomposition import PCA, FastICA, KernelPCA
 from sklearn.preprocessing import StandardScaler, PowerTransformer, Normalizer, FunctionTransformer
 from sklearn.cluster import estimate_bandwidth
 
+from autoencode_abstraction import AE, train
 from utils import save
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 
@@ -94,8 +99,34 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
         save(pca, 'pca_4')
         print('Dimensions reduced with PCA')
 
-    if scale:
+    if scale is True and scale != 'ae':
         observation_space = scaler.transform(observation_space)
+    if scale == 'ae':
+        autoencoder = AE(4) # round accuracy not important here
+        # Validation using MSE Loss function
+        loss_function = torch.nn.MSELoss()
+        # Using an Adam Optimizer with lr = 0.1
+        optimizer = torch.optim.Adam(autoencoder.parameters())
+
+        train_loader = DataLoader(observation_space, batch_size=64)
+
+        #ae_name = f'autoencoder_{env_name}_latent_size_4'
+        ae_name = f'pickle_files/autoencoder_latent_size_4'
+        if os.path.exists(f'{ae_name}.pickle'):
+            print('Autoencoded loaded')
+            with open(f'{ae_name}.pickle', 'rb') as handle:
+                autoencoder = pickle.load(handle)
+        else:
+            train(autoencoder, train_loader, 1, optimizer, loss_function)
+            with open(f'{ae_name}.pickle', 'wb') as handle:
+                pickle.dump(autoencoder, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+        abstracted_obs_space = []
+        for i in range(len(observation_space)):
+            abstracted_obs_space.append(autoencoder.encoder(torch.tensor(observation_space[i])).detach().numpy())
+
+        print('Observation space reduced with autoencoder')
+        observation_space = np.array(abstracted_obs_space)
 
     clustering_function = None
     cluster_labels = None
