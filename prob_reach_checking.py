@@ -93,8 +93,9 @@ def create_labels_in_traces(traces_in_ref, env_name):
 
 def prob_reach_checking(env, scaler, clustering_function, n_traces_per_ref,
                         model_refinements, nr_reaches, input_map, jalergia_samples, nr_outputs, alergia_eps, goal,
-                        environment_name, agent = None):
-    mdp = compute_mdp(jalergia_samples, alergia_eps)
+                        environment_name, agent = None, mdp = None, refine_mdp = True):
+    if mdp is None:
+       mdp = compute_mdp(jalergia_samples, alergia_eps)
     prism_interface = PrismInterface([goal], mdp)
     scheduler = ProbabilisticScheduler(prism_interface.scheduler, True)
     crashes = 0
@@ -184,15 +185,17 @@ def prob_reach_checking(env, scaler, clustering_function, n_traces_per_ref,
             std_dev = math.sqrt((1. / len(rewards)) * sum([(r - avg_reward) ** 2 for r in rewards]))
             print(f"Average reward in iteration: {avg_reward} +/- {std_dev}")
         print(f"Goal frequency: {goal_freq / len(traces_in_ref)}")
-        append_samples_to_file(label_traces, jalergia_samples)
+        if refine_mdp:
+            append_samples_to_file(label_traces, jalergia_samples)
         if curr_nr_reaches >= nr_reaches:
             break
-        mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy',
-                           eps=alergia_eps)
-        remove_nan(mdp)
-        mdp.make_input_complete(missing_transition_go_to='sink_state')
-        prism_interface = PrismInterface([goal], mdp)
-        scheduler = ProbabilisticScheduler(prism_interface.scheduler, True)
+        if refine_mdp:
+            mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy',
+                               eps=alergia_eps)
+            remove_nan(mdp)
+            mdp.make_input_complete(missing_transition_go_to='sink_state')
+            prism_interface = PrismInterface([goal], mdp)
+            scheduler = ProbabilisticScheduler(prism_interface.scheduler, True)
         traces_in_ref.clear()
     return crashes, nr_tries, curr_nr_reaches
 
