@@ -94,7 +94,7 @@ def create_abstract_traces(traces, cluster_labels):
                 abstract_obs = 'GOAL'
             else:
                 abstract_obs = f'c{cluster_labels[i].item(0)}'
-            at.append((action.item(0), abstract_obs))
+            at.append((f'i{action.item(0)}', abstract_obs))
             i += 1
         abstract_traces.append(at)
 

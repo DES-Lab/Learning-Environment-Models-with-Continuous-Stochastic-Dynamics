@@ -44,7 +44,7 @@ class Scheduler:
 
     def get_input(self):
         if self.current_state is None:
-            # print("Return none because current state is none")
+            print("Return none because current state is none")
             return None
         else:
             # print("Current state is not none")

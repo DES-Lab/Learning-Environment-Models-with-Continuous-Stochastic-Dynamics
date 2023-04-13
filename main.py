@@ -8,7 +8,7 @@ from abstraction import compute_clustering_function_and_map_to_traces
 from agents import get_lunar_lander_agents, load_agent
 from dim_recution import get_observations_and_actions, ManualLunarLanderDimReduction, AutoencoderDimReduction, \
     PcaDimReduction, LdaDimReduction
-from prism_scheduler import ProbabilisticScheduler, PrismInterface
+from prism_scheduler import ProbabilisticScheduler, PrismInterface, compute_weighted_clusters
 from utils import load, save, delete_file, save_samples_to_file, get_traces_from_policy, create_abstract_traces
 
 environment = "LunarLander-v2"
@@ -43,9 +43,9 @@ lda = LdaDimReduction()
 pca = PcaDimReduction(n_dim=4)
 ae = AutoencoderDimReduction(4, 20)
 
-ae.fit(obs)
+pca.fit(obs)
 
-transformed = ae.transform(obs)
+transformed = pca.transform(obs)
 
 from clustering import get_k_means_clustering, get_mean_shift_clustering
 
@@ -74,21 +74,31 @@ class IterativeRefinement:
         for refinement_iteration in range(num_iterations):
             model.make_input_complete('sink_state')
             scheduler = PrismInterface('GOAL', self.model).scheduler
-            # scheduler = ProbabilisticScheduler(scheduler, truly_probabilistic=True)
+            scheduler = ProbabilisticScheduler(scheduler, truly_probabilistic=True)
 
             for _ in range(episodes_per_iteration):
+                scheduler.reset()
                 self.env.reset()
                 ep_data = []
                 while True:
-                    action = scheduler.get_input()
+                    scheduler_input = scheduler.get_input()
+                    if scheduler_input is None:
+                        print('Could not schedule an action.')
+                        break
+
+                    action = int(scheduler_input[1:])
                     observation, reward, done, _ = self.env.step(action)
 
                     abstract_obs = self.dim_reduction_fun.transform([observation])
                     abstract_obs = self.clustering_fun.predict(abstract_obs)
-                    abstract_obs = f'c{abstract_obs}'
+                    # abstract_obs = f'c{abstract_obs}'
 
-                    step_successful = scheduler.step_to(action, abstract_obs)
+                    weighted_clusters = compute_weighted_clusters(abstract_obs, self.clustering_fun,
+                                                                  len(set(self.clustering_fun.labels_)))
+
+                    step_successful = scheduler.step_to(scheduler_input, weighted_clusters)
                     if not step_successful:
+                        # print('Could not step in a model')
                         break
 
                     ep_data.append((observation.reshape(1, -1), action, reward, done))
@@ -105,9 +115,9 @@ class IterativeRefinement:
 
             extended_data = create_abstract_traces(self.traces, cluster_labels)
             self.model = run_Alergia(extended_data, automaton_type='mdp')
-            print(f'Refinement {refinement_iteration} model size: {self.model.size} states')
+            print(f'Refinement {refinement_iteration + 1} model size: {self.model.size} states')
 
 
-ir = IterativeRefinement(env, model, traces, ae, cf2, )
+ir = IterativeRefinement(env, model, traces, pca, cf2, )
 
 ir.iteratively_refine_model(10, 100)
