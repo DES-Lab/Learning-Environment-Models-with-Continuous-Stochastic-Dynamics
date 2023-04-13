@@ -289,7 +289,7 @@ if __name__ == "__main__":
         # traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.05, 0.1, 0.15])]
         traces = [get_traces_from_policy(dqn_agent, env, num_traces_env_learn, action_map,
                                          # randomness_probs=[0, 0.05, 0.01, 0.02, 0.03,0.04], duplicate_action=False)]
-                                         randomness_probs=[0, 0.05, 0.1, 0.15, 0.2, 0.25], duplicate_action=False)]
+                                         randomness_probabilities=[0, 0.05, 0.1, 0.15, 0.2, 0.25], duplicate_action=False)]
         save(traces,trace_file)
     traces = traces[0]
     transformed_traces = []

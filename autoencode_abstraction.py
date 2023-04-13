@@ -1,47 +1,26 @@
-import math
+import os
 import os
 import pickle
 import random
 from collections import defaultdict, Counter
-
 from statistics import mean
 
+import aalpy.paths
 import gym
 import torch
-import aalpy.paths
 from aalpy.automata import Mdp, MdpState
-from aalpy.learning_algs import run_Alergia, run_JAlergia
-from aalpy.utils import load_automaton_from_file
+from aalpy.learning_algs import run_JAlergia
 from stable_baselines3 import DQN
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from agents import load_agent
-from prism_scheduler import PrismInterface, ProbabilisticScheduler
+from prism_scheduler import PrismInterface
 from utils import load, get_traces_from_policy, save
 
 action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
 input_map = {v: k for k, v in action_map.items()}
 
-
-def remove_nan(mdp):
-    changed = False
-    for s in mdp.states:
-        to_remove = []
-        for input in s.transitions.keys():
-            is_nan = False
-            for t in s.transitions[input]:
-                if math.isnan(t[1]):
-                    is_nan = True
-                    to_remove.append(input)
-                    break
-            if not is_nan:
-                if abs(sum(map(lambda t: t[1], s.transitions[input])) - 1) > 1e-6:
-                    to_remove.append(input)
-        for input in to_remove:
-            changed = True
-            s.transitions.pop(input)
-    return changed
 
 
 class AE(torch.nn.Module):
@@ -393,7 +372,7 @@ if __name__ == '__main__':
     traces = load(trace_file)
     if traces is None:
         dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-        traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0])]
+        traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probabilities=[0])]
         save(traces, trace_file)
     print('Traces obtained')
 

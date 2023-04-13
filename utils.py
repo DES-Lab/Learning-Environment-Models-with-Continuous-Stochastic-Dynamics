@@ -2,33 +2,8 @@ import os
 import pickle
 import random
 
-import numpy as np
-from aalpy.base import SUL
 from sklearn.cluster import KMeans
 from tqdm import tqdm
-
-
-class GymSUL(SUL):
-    def __init__(self, env, clustering_fun):
-        super().__init__()
-        self.env = env
-        self.clustering_fun = clustering_fun
-        self.last_obs = None
-
-    def pre(self):
-        obs = self.env.reset()
-        self.last_obs = obs
-        return obs
-
-    def post(self):
-        pass
-
-    def step(self, letter):
-        if letter is None:
-            return self.last_obs
-        obs, reward, done, _ = self.env.step(letter)
-        cluster = self.clustering_fun.predict(obs.reshape(1, -1))
-        return f'c{cluster}' if not done else 'DONE'
 
 
 def compute_clusters(data, n_clusters):
@@ -50,6 +25,7 @@ def load(file_name):
     else:
         return None
 
+
 def append_samples_to_file(samples, filename='jAlergiaData.txt'):
     with open(filename, 'a') as f:
         for sample in samples:
@@ -57,6 +33,8 @@ def append_samples_to_file(samples, filename='jAlergiaData.txt'):
             for i, o in sample[1:]:
                 s += f'{str(i)},{str(o)},'
             f.write(s[:-1] + '\n')
+
+
 def save_samples_to_file(samples, filename='jAlergiaData.txt'):
     with open(filename, 'w') as f:
         for sample in samples:
@@ -77,29 +55,47 @@ def compress_trace(x):
     return [key for key, _group in groupby(x)]
 
 
-def get_traces_from_policy(agent, env, num_episodes, action_map,stop_prob = 0, randomness_probs=(0,),
-                           duplicate_action=False):
+def get_traces_from_policy(agent, env, num_episodes, randomness_probabilities=(0,)):
     traces = []
     rand_i = 0
+    print(f'Getting demonstrations from an pretrained agent. Included randomness: {randomness_probabilities}')
+
     for _ in tqdm(range(num_episodes)):
-        curr_randomness = randomness_probs[rand_i]
-        rand_i = (rand_i + 1) % len(randomness_probs)
+        curr_randomness = randomness_probabilities[rand_i]
+
         observation = env.reset()
         episode_trace = []
         while True:
             if random.random() < curr_randomness:
-                action = random.randint(0, len(action_map) - 1)
+                action = random.randint(0, env.action_space.n - 1)
             else:
                 action, _ = agent.predict(observation)
             observation, reward, done, info = env.step(action)
-            if duplicate_action:
-                observation, reward, done, info = env.step(action)
+
             episode_trace.append((observation.reshape(1, -1), action, reward, done))
-            if stop_prob > 0 and random.random() < stop_prob:
-                break
+
             if done:
                 break
 
         traces.append(episode_trace)
 
     return traces
+
+
+def create_abstract_traces(traces, cluster_labels):
+    abstract_traces = []
+
+    i = 0
+    print('Creating Alergia Traces')
+    for trace in tqdm(traces):
+        at = ['Init']  # initial
+        for _, action, rew, done in trace:
+            if rew == 100:
+                abstract_obs = 'GOAL'
+            else:
+                abstract_obs = f'c{cluster_labels[i].item(0)}'
+            at.append((action.item(0), abstract_obs))
+            i += 1
+        abstract_traces.append(at)
+
+    return abstract_traces

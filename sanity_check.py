@@ -39,7 +39,7 @@ else:
     all_data = [
         get_traces_from_policy(agent, env, num_traces, action_map, stop_prob=0.0,
                                # randomness_probs=[0, 0.025, 0.05, 0.1, 0.15,0.2])),
-                               randomness_probs=[0, 0.025, 0.05, 0.1])]
+                               randomness_probabilities=[0, 0.025, 0.05, 0.1])]
     # randomness_probs=[0, 0.025, 0.05, 0.1, 0.15,0.2,0.25])]
     save(all_data, traces_file_name)
 

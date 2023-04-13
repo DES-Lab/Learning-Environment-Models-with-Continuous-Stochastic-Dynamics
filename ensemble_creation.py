@@ -132,7 +132,7 @@ if __name__ == '__main__':
         # traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.05, 0.1, 0.15])]
         traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map,
                                          # randomness_probs=[0, 0.05, 0.01, 0.02, 0.03,0.04], duplicate_action=False)]
-                                         randomness_probs=[0, 0.05, 0.1, 0.15,0.2,0.25], duplicate_action=False)]
+                                         randomness_probabilities=[0, 0.05, 0.1, 0.15, 0.2, 0.25], duplicate_action=False)]
                                          # randomness_probs=[0, 0.15, 0.25, 0.35,0.5], duplicate_action=False)]
         save(traces,trace_file)
     alergia_traces = compute_clustering_function_and_map_to_traces(traces, action_map, env_name, include_reward=False,

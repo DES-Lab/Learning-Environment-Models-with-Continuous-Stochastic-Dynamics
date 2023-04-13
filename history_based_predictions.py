@@ -100,7 +100,7 @@ if __name__ == '__main__':
     traces = load(trace_file)
     if traces is None:
         dqn_agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-        traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probs=[0, 0.01, 0.025, 0.05])]
+        traces = [get_traces_from_policy(dqn_agent, env, num_traces, action_map, randomness_probabilities=[0, 0.01, 0.025, 0.05])]
         save(traces, trace_file)
     print('Traces obtained')
 

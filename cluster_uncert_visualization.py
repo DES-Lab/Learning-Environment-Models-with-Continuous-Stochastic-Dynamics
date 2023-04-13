@@ -399,7 +399,7 @@ if __name__ == '__main__':
     else:
         print(f'Obtaining {num_traces} per agent')
         all_data = [get_traces_from_policy(agent, env, num_traces, action_map, stop_prob=0.0,
-                                           randomness_probs=[0.33])]
+                                           randomness_probabilities=[0.33])]
         save(all_data, traces_file_name)
     traces = all_data
 
