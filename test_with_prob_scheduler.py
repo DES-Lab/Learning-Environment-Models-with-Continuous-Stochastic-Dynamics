@@ -47,7 +47,7 @@ else:
 # model = load_automaton_from_file(f'mdp_combined_scale_{scale}_{num_clusters}_{num_traces}.dot', 'mdp')
 # model.make_input_complete(missing_transition_go_to='sink_state')
 
-jalergia_samples = 'alergiaSamples.txt'
+jalergia_samples = 'alergiaSamples_lda_working.txt'
 model = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx8G', optimize_for='accuracy', eps=0.00005)
 remove_nan(model)
 model.make_input_complete(missing_transition_go_to='sink_state')

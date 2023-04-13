@@ -22,7 +22,7 @@ if environment == 'LunarLander-v2':
 # print('Agents loaded')
 
 num_traces = 2500
-num_clusters = 256
+num_clusters = 128
 scale = True
 
 env = gym.make(environment, )
@@ -46,12 +46,12 @@ alergia_traces = compute_clustering_function_and_map_to_traces(all_data,
                                                                environment,
                                                                num_clusters,
                                                                scale=scale,
-                                                               reduce_dimensions=False)
+                                                               reduce_dimensions=False,include_reward=True)
 all_traces = alergia_traces[0]
 # for i in range(1, len(alergia_traces)):
 #     all_traces.extend(alergia_traces[i])
 
-jalergia_samples = 'alergiaSamples.txt'
+jalergia_samples = 'alergiaSamples_ae_transformer.txt'
 save_samples_to_file(all_traces, jalergia_samples)
 mdp = run_JAlergia(jalergia_samples, 'mdp', 'alergia.jar', heap_memory='-Xmx4G', optimize_for='accuracy', eps=0.005)
 # delete_file(jalergia_samples)

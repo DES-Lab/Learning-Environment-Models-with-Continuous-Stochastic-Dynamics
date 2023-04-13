@@ -93,7 +93,7 @@ def create_labels_in_traces(traces_in_ref, env_name):
 
 def prob_reach_checking(env, scaler, clustering_function, n_traces_per_ref,
                         model_refinements, nr_reaches, input_map, jalergia_samples, nr_outputs, alergia_eps, goal,
-                        environment_name, agent = None, mdp = None, refine_mdp = True):
+                        environment_name, agent = None, mdp = None, refine_mdp = True, include_reward = False):
     if mdp is None:
        mdp = compute_mdp(jalergia_samples, alergia_eps)
     prism_interface = PrismInterface([goal], mdp)
@@ -111,11 +111,13 @@ def prob_reach_checking(env, scaler, clustering_function, n_traces_per_ref,
             print(f"Trace {j}")
             curr_trace = ['INIT']
             obs = env.reset()
+            if include_reward:
+                obs = np.append(obs,0)
             conc_obs = obs
-            conc_obs = conc_obs.reshape(1, -1).astype(float)
+            conc_obs = conc_obs.reshape(1, -1) #.astype(float)
             unscaled_obs = conc_obs
             if scaler:
-                conc_obs = scaler.transform(conc_obs)
+                conc_obs = scaler.transform(conc_obs).astype(float)
             obs = f'c{clustering_function.predict(conc_obs)[0]}'
             weighted_clusters = compute_weighted_clusters(conc_obs, clustering_function, nr_outputs)
             scheduler.reset()
@@ -139,12 +141,14 @@ def prob_reach_checking(env, scaler, clustering_function, n_traces_per_ref,
                         break
                     concrete_action = input_map[action]
                     obs, rew, done, info = env.step(concrete_action)
+                    if include_reward:
+                        obs = np.append(obs,rew)
                     reward += rew
                     conc_obs = obs
-                    conc_obs = conc_obs.reshape(1, -1).astype(float)
+                    conc_obs = conc_obs.reshape(1, -1)# .astype(float)
                     unscaled_obs = conc_obs
                     if scaler:
-                        conc_obs = scaler.transform(conc_obs)
+                        conc_obs = scaler.transform(conc_obs).astype(float)
 
                     cluster_label_int = clustering_function.predict(conc_obs)[0]
                     obs = f'c{cluster_label_int}'

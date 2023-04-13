@@ -11,6 +11,7 @@ from sklearn.decomposition import PCA, FastICA, KernelPCA
 from sklearn.preprocessing import StandardScaler, PowerTransformer, Normalizer, FunctionTransformer
 from sklearn.cluster import estimate_bandwidth
 
+from AeTransformer import AeTransformer
 from utils import save
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
 
@@ -56,9 +57,10 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
             for x in trace:
                 # print(x)
                 state = list(x[0][0])
-                # reward = x[2]
-                # if include_reward:
-                #     state.append(reward)
+                action = x[1]
+                reward = (x[2])
+                if include_reward:
+                    state.append(reward)
                 actions.append(x[1])
                 observation_space.append(state)
                 # observation_space.extend([x[0][0:6] for trace in sampled_data for x in trace])
@@ -67,6 +69,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
 
     observation_space = np.array(observation_space)
     observation_space = np.squeeze(observation_space)
+    print(observation_space.shape)
     actions = np.array(actions)
     actions = np.squeeze(actions)
     # scaler = PowerTransformer()
@@ -80,12 +83,16 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
     # scaler = make_pipeline(LDATransformer(observation_space,actions))
 
     # this works
-    scaler = make_pipeline(StandardScaler(), LDATransformer(observation_space, actions))
+    # scaler = make_pipeline(StandardScaler(), LDATransformer(observation_space, actions))
+    # I try this
+    # scaler = make_pipeline(AeTransformer(observation_space.shape[1], 2, 150))
+    scaler = make_pipeline(AeTransformer(observation_space.shape[1], 3, 40))
 
     # scaler = make_pipeline(PCA(n_components=4),PowerTransformer())
 
+    scaler_name = "ae_scaler"
     scaler.fit(observation_space)
-    save(scaler, f'power_scaler_{env_name}_{num_traces}')
+    save(scaler, f'{scaler_name}_{env_name}_{num_traces}')
 
     if reduce_dimensions:
         pca = PCA(n_components=4)
@@ -115,7 +122,7 @@ def compute_clustering_function_and_map_to_traces(traces_obtained_from_all_agent
         print(f"Found {len(clustering_function.cluster_centers_)} clusters with mean shift")
         cluster_labels = clustering_function.predict(observation_space)
 
-    save(clustering_function, f'{env_name}_{clustering_type}_scale_{scale}_{n_clusters}_{num_traces}')
+    save(clustering_function, f'{env_name}_{clustering_type}_scale_{scaler_name}_{n_clusters}_{num_traces}')
 
     print('Cluster labels computed')
 
