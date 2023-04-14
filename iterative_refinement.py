@@ -1,7 +1,7 @@
 import numpy as np
 from aalpy.learning_algs import run_Alergia
 
-from dim_recution import get_observations_and_actions
+from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
 from utils import create_abstract_traces
 
