@@ -22,9 +22,9 @@ class AE(torch.nn.Module):
         self.encoder = torch.nn.Sequential(
             torch.nn.Linear(8, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(32, 64),
+            torch.nn.Linear(32, 128),
             torch.nn.ReLU(),
-            torch.nn.Linear(64, 32),
+            torch.nn.Linear(128, 32),
             torch.nn.ReLU(),
             torch.nn.Linear(32, latent_dim),
         )
@@ -32,9 +32,9 @@ class AE(torch.nn.Module):
         self.decoder = torch.nn.Sequential(
             torch.nn.Linear(latent_dim, 32),
             torch.nn.ReLU(),
-            torch.nn.Linear(32, 64),
+            torch.nn.Linear(32, 128),
             torch.nn.ReLU(),
-            torch.nn.Linear(64, 32),
+            torch.nn.Linear(128, 32),
             torch.nn.ReLU(),
             torch.nn.Linear(32, 8),
         )

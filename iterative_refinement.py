@@ -1,5 +1,5 @@
 import numpy as np
-from aalpy.learning_algs import run_Alergia
+from aalpy.learning_algs import run_Alergia, run_JAlergia
 
 from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
@@ -7,18 +7,19 @@ from utils import create_abstract_traces
 
 
 class IterativeRefinement:
-    def __init__(self, env, initial_model, traces, dim_reduction_pipeline, clustering_fun):
+    def __init__(self, env, initial_model, abstract_traces, dim_reduction_pipeline, clustering_fun):
         self.env = env
         self.model = initial_model
-        self.traces = traces
+        self.abstract_traces = abstract_traces
         self.dim_reduction_pipeline = dim_reduction_pipeline
         self.clustering_fun = clustering_fun
 
-    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='GOAL'):
+    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ'):
 
         nums_goal_reached = 0
 
         for refinement_iteration in range(num_iterations):
+
             # Make model input complete
             self.model.make_input_complete('sink_state')
             scheduler = PrismInterface(goal_state, self.model).scheduler
@@ -26,6 +27,8 @@ class IterativeRefinement:
 
             num_goal_reached_iteration = 0
             num_crashes_per_iteration = 0
+
+            concrete_traces = []
 
             for _ in range(episodes_per_iteration):
                 scheduler.reset()
@@ -68,18 +71,19 @@ class IterativeRefinement:
                             num_crashes_per_iteration += 1
                         break
 
-                self.traces.append(ep_data)
+                concrete_traces.append(ep_data)
 
             nums_goal_reached += num_goal_reached_iteration
             print(f'# Goal Reached : {num_goal_reached_iteration} / {episodes_per_iteration}')
             print(f'# Crashes  : {num_crashes_per_iteration} / {episodes_per_iteration}')
 
             # refine model
-            observation_space, action_space = get_observations_and_actions(self.traces)
+            observation_space, action_space = get_observations_and_actions(concrete_traces)
             reduced_dim_obs_space = self.dim_reduction_pipeline.transform(observation_space)
             cluster_labels = self.clustering_fun.predict(reduced_dim_obs_space)
 
-            extended_data = create_abstract_traces(self.traces, cluster_labels)
-            self.model = run_Alergia(extended_data, automaton_type='mdp')
+            abstract_traces = create_abstract_traces(concrete_traces, cluster_labels)
+            self.model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
+                                      optimize_for='accuracy')
 
             print(f'Refinement {refinement_iteration + 1} model size: {self.model.size} states')

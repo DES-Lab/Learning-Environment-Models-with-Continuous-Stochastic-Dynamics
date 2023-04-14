@@ -46,15 +46,14 @@ class PipelineWrapper(Pipeline):
 
 
 class AutoencoderDimReduction(BaseEstimator, TransformerMixin):
-    def __init__(self, latent_dim, num_training_epochs, env_name):
+    def __init__(self, latent_dim, num_training_epochs):
         super().__init__()
-        self.env_name = env_name
         self.latent_dim = latent_dim
         self.num_training_epochs = num_training_epochs
         self.ae = AE(latent_dim)
 
     def fit(self, X, y=None):
-        self.ae.train_autoencoder(X, epochs=20, batch_size=64)
+        self.ae.train_autoencoder(X, epochs=self.num_training_epochs, batch_size=64)
 
     def transform(self, X, y=None):
         return np.array([self.ae.encoder(torch.tensor(obs)).detach().numpy().tolist() for obs in X])
@@ -66,7 +65,8 @@ def get_k_means_clustering(observations, n_clusters, dim_red_pipeline_name, redu
         clustering_function = load(cf_name)
         print(f'K-means with {n_clusters} loaded.')
         assert clustering_function
-        return clustering_function
+        cluster_labels = clustering_function.predict(np.array(observations))
+        return clustering_function, cluster_labels
 
     print(f'Computing k-means with {n_clusters} clusters.')
     clustering_function = KMeans(n_clusters=n_clusters, init="k-means++")
