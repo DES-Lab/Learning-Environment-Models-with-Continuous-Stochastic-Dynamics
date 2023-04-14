@@ -13,14 +13,13 @@ def compute_clusters(data, n_clusters):
 
 
 def save(x, path):
-    with open(f'pickle_files/{path}.pickle', 'wb') as handle:
+    with open(path, 'wb') as handle:
         pickle.dump(x, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load(file_name):
-    full_file_name = f'pickle_files/{file_name}.pickle'
-    if os.path.exists(full_file_name):
-        with open(full_file_name, 'rb') as handle:
+    if os.path.exists(file_name):
+        with open(file_name, 'rb') as handle:
             return pickle.load(handle)
     else:
         return None
@@ -55,7 +54,18 @@ def compress_trace(x):
     return [key for key, _group in groupby(x)]
 
 
-def get_traces_from_policy(agent, env, num_episodes, randomness_probabilities=(0,)):
+def get_traces_from_policy(agent, env, num_episodes, agent_name,
+                           randomness_probabilities=(0,), load_traces=True):
+
+    traces_name = f'pickles/traces/{env.unwrapped.spec.id}_{agent_name}' \
+                  f'_num_ep_{num_episodes}_{str(randomness_probabilities)}.pk'
+
+    if load_traces and os.path.exists(traces_name):
+        traces = load(traces_name)
+        print('Traces loaded.')
+        assert traces
+        return traces
+
     traces = []
     rand_i = 0
     print(f'Getting demonstrations from an pretrained agent. Included randomness: {randomness_probabilities}')
@@ -78,6 +88,9 @@ def get_traces_from_policy(agent, env, num_episodes, randomness_probabilities=(0
                 break
 
         traces.append(episode_trace)
+
+    print(f'Traces computed. Saving to {traces_name}')
+    save(traces, traces_name)
 
     return traces
 

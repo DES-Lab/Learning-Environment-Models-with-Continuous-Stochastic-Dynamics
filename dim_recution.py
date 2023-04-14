@@ -5,6 +5,8 @@ import torch
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from autoencoder import AE
 
@@ -24,6 +26,12 @@ def get_observations_and_actions(traces, include_reward=False):
 
 
 class DimReduction(ABC, BaseEstimator, TransformerMixin):
+    def __init__(self, env_name, include_sclaer=True, save=True, load=True):
+        self.env_name = env_name
+        self.include_scaler = include_sclaer
+
+        self.save = save
+        self.load = load
 
     @abstractmethod
     def fit(self, X, y=None):
@@ -35,8 +43,6 @@ class DimReduction(ABC, BaseEstimator, TransformerMixin):
 
 
 class ManualLunarLanderDimReduction(DimReduction):
-    def __init__(self, env_name):
-        self.env_name = env_name
 
     def fit(self, X, y=None):
         pass
@@ -53,7 +59,8 @@ class ManualLunarLanderDimReduction(DimReduction):
 
 
 class LdaDimReduction(DimReduction):
-    def __init__(self):
+    def __init__(self, env_name):
+        super().__init__(env_name)
         self.lda = LinearDiscriminantAnalysis()
 
     # y are actions
@@ -65,7 +72,8 @@ class LdaDimReduction(DimReduction):
 
 
 class PcaDimReduction(DimReduction):
-    def __init__(self, n_dim):
+    def __init__(self, n_dim, env_name):
+        super().__init__(env_name)
         self.n_dim = n_dim
         self.pca = PCA(n_components=n_dim)
 
@@ -77,7 +85,8 @@ class PcaDimReduction(DimReduction):
 
 
 class AutoencoderDimReduction(DimReduction):
-    def __init__(self, latent_dim, num_training_epochs):
+    def __init__(self, latent_dim, num_training_epochs, env_name):
+        super().__init__(env_name)
         self.latent_dim = latent_dim
         self.num_training_epochs = num_training_epochs
         self.ae = AE(latent_dim)
