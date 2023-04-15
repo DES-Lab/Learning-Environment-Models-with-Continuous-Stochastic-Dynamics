@@ -34,7 +34,7 @@ agent_names = None
 agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 
 num_traces = 2500
-num_clusters = 128
+num_clusters = 8
 
 env = gym.make(env_name, )
 traces_file_name = f'{env_name}_{num_traces}_traces'
@@ -45,20 +45,19 @@ obs, actions = get_observations_and_actions(traces)
 
 ae = AutoencoderDimReduction(4, 10,)
 
-dim_red_pipeline = PipelineWrapper(env_name, num_traces, [('scaler', StandardScaler()), ('pca_4', PCA(n_components=4)),])
+dim_red_pipeline = PipelineWrapper(env_name, num_traces, [('scaler', StandardScaler()), ('pca_4', PCA(n_components=3)),])
 dim_red_pipeline.fit(obs, actions)
 
 transformed = dim_red_pipeline.transform(obs)
 k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clusters, dim_red_pipeline.pipeline_name)
 
 abstract_traces = create_abstract_traces(traces, cluster_labels, count_same_cluster=True)
-for i in abstract_traces:
-    i.pop(0)
+# for i in abstract_traces:
+#     i.pop(0)
 
-model = run_JAlergia(abstract_traces, automaton_type='smm', path_to_jAlergia_jar='alergia.jar', optimize_for='accuracy')
-print(model)
-mdp = model.to_mdp()
+model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', optimize_for='accuracy')
+# model = model.to_mdp()
 
-ir = IterativeRefinement(env, model, abstract_traces, dim_red_pipeline, k_means_clustering, )
+ir = IterativeRefinement(env, model, abstract_traces, dim_red_pipeline, k_means_clustering, scheduler_type='deterministic')
 
 ir.iteratively_refine_model(10, 100)

@@ -3,16 +3,19 @@ from aalpy.learning_algs import run_JAlergia
 
 from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
-from utils import create_abstract_traces
+from utils import create_abstract_traces, remove_nan
 
 
 class IterativeRefinement:
-    def __init__(self, env, initial_model, abstract_traces, dim_reduction_pipeline, clustering_fun):
+    def __init__(self, env, initial_model, abstract_traces, dim_reduction_pipeline, clustering_fun,
+                 scheduler_type='probabilistic'):
+        assert scheduler_type in {'probabilistic', 'deterministic'}
         self.env = env
         self.model = initial_model
         self.abstract_traces = abstract_traces
         self.dim_reduction_pipeline = dim_reduction_pipeline
         self.clustering_fun = clustering_fun
+        self.scheduler_type = scheduler_type
 
     def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ'):
 
@@ -20,10 +23,13 @@ class IterativeRefinement:
 
         for refinement_iteration in range(num_iterations):
 
+            # due to a bug in alergia
+            remove_nan(self.model)
             # Make model input complete
             self.model.make_input_complete('sink_state')
             scheduler = PrismInterface(goal_state, self.model).scheduler
-            scheduler = ProbabilisticScheduler(scheduler, truly_probabilistic=True)
+            if self.scheduler_type == 'probabilistic':
+                scheduler = ProbabilisticScheduler(scheduler, truly_probabilistic=True)
 
             num_goal_reached_iteration = 0
             num_crashes_per_iteration = 0
@@ -44,24 +50,27 @@ class IterativeRefinement:
                     action = np.array(int(scheduler_input[1:]))
 
                     observation, reward, done, _ = self.env.step(action)
+                    ep_data.append((observation.reshape(1, -1), action, reward, done))
 
                     abstract_obs = self.dim_reduction_pipeline.transform(np.array([observation]))
 
                     reached_cluster = self.clustering_fun.predict(abstract_obs)[0]
                     reached_cluster = f'c{abstract_obs}'
-
+                    # TODO add counting
                     if reached_cluster == goal_state:
                         num_goal_reached_iteration += 1
 
-                    weighted_clusters = compute_weighted_clusters(abstract_obs, self.clustering_fun,
-                                                                  len(set(self.clustering_fun.labels_)))
+                    if self.scheduler_type == 'probabilistic':
+                        weighted_clusters = compute_weighted_clusters(abstract_obs, self.clustering_fun,
+                                                                      len(set(self.clustering_fun.labels_)))
 
-                    step_successful = scheduler.step_to(scheduler_input, weighted_clusters)
+                        step_successful = scheduler.step_to(scheduler_input, weighted_clusters)
+                    else:
+                        step_successful = scheduler.step_to(scheduler_input, reached_cluster)
+
                     if not step_successful:
                         print('Could not step in a model')
                         break
-
-                    ep_data.append((observation.reshape(1, -1), action, reward, done))
 
                     if done:
                         if reward == 100 and goal_state == 'GOAL':
@@ -82,8 +91,12 @@ class IterativeRefinement:
             reduced_dim_obs_space = self.dim_reduction_pipeline.transform(observation_space)
             cluster_labels = self.clustering_fun.predict(reduced_dim_obs_space)
 
-            abstract_traces = create_abstract_traces(concrete_traces, cluster_labels)
-            self.model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
+            iteration_abstract_traces = create_abstract_traces(concrete_traces, cluster_labels)
+
+            for i in iteration_abstract_traces[:5]:
+                print(i)
+            self.abstract_traces.extend(iteration_abstract_traces)
+            self.model = run_JAlergia(self.abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
                                       optimize_for='accuracy')
 
             print(f'Refinement {refinement_iteration + 1} model size: {self.model.size} states')

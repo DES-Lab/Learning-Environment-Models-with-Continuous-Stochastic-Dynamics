@@ -1,3 +1,4 @@
+import math
 import os
 import pickle
 import random
@@ -126,9 +127,29 @@ def create_abstract_traces(traces, cluster_labels, count_same_cluster=False):
 
             new_trace = ['Init']
             for i, o in zip(actions, counted_clusters):
-                new_trace.extend((i, f'{o[0]}_{o[1]}'))
+                new_trace.extend((i, f'{o[0]}_{o[1]}' if 'succ' not in o[0] else o[0]))
             counting_abstract_traces.append(new_trace)
 
         return counting_abstract_traces
 
     return abstract_traces
+
+
+def remove_nan(mdp):
+    changed = False
+    for s in mdp.states:
+        to_remove = []
+        for input in s.transitions.keys():
+            is_nan = False
+            for t in s.transitions[input]:
+                if math.isnan(t[1]):
+                    is_nan = True
+                    to_remove.append(input)
+                    break
+            if not is_nan:
+                if abs(sum(map(lambda t: t[1], s.transitions[input])) - 1) > 1e-6:
+                    to_remove.append(input)
+        for input in to_remove:
+            changed = True
+            s.transitions.pop(input)
+    return changed
