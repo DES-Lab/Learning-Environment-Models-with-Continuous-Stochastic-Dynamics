@@ -1,5 +1,5 @@
 import numpy as np
-from aalpy.learning_algs import run_Alergia, run_JAlergia
+from aalpy.learning_algs import run_JAlergia
 
 from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
