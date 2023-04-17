@@ -29,6 +29,11 @@ traces_file_name = f'{env_name}_{num_traces}_traces'
 
 traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN' )
 
+prunded_traces = []
+for traces in traces:
+    prunded_traces.append(traces[0:25])
+traces = prunded_traces
+
 obs, actions = get_observations_and_actions(traces)
 
 ae = AutoencoderDimReduction(4, 10,)
@@ -37,16 +42,13 @@ dim_red_pipeline = PipelineWrapper(env_name, num_traces, [('scaler', StandardSca
 dim_red_pipeline.fit(obs, actions)
 
 transformed = dim_red_pipeline.transform(obs)
+
+every_n_size = None
+
 k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clusters, dim_red_pipeline.pipeline_name)
 
 abstract_traces = create_abstract_traces(traces, cluster_labels, count_same_cluster=count_observations)
-# for i in abstract_traces:
-#     i.pop(0)
 
 model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', optimize_for='accuracy')
-# model = model.to_mdp()
 
-ir = IterativeRefinement(env, model, abstract_traces, dim_red_pipeline, k_means_clustering,
-                         scheduler_type='probabilistic', count_observations=count_observations)
-
-ir.iteratively_refine_model(10, 100)
+model.visualize()
