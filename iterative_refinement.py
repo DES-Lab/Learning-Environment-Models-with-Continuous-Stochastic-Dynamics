@@ -2,17 +2,20 @@ from statistics import mean
 
 import numpy as np
 from aalpy.learning_algs import run_JAlergia
+from tqdm import tqdm
 
 from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
-from utils import create_abstract_traces, remove_nan
+from utils import remove_nan
+from trace_abstraction import create_abstract_traces
 
 
 class IterativeRefinement:
-    def __init__(self, env, initial_model, abstract_traces, dim_reduction_pipeline, clustering_fun,
+    def __init__(self, env, env_name, initial_model, abstract_traces, dim_reduction_pipeline, clustering_fun,
                  scheduler_type='probabilistic', count_observations=False):
         assert scheduler_type in {'probabilistic', 'deterministic'}
         self.env = env
+        self.env_name = env_name
         self.model = initial_model
         self.abstract_traces = abstract_traces
         self.dim_reduction_pipeline = dim_reduction_pipeline
@@ -20,7 +23,7 @@ class IterativeRefinement:
         self.scheduler_type = scheduler_type
         self.count_observations = count_observations
 
-    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ'):
+    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=0.8):
 
         nums_goal_reached = 0
 
@@ -40,7 +43,7 @@ class IterativeRefinement:
             concrete_traces = []
 
             ep_rewards = []
-            for _ in range(episodes_per_iteration):
+            for _ in tqdm(range(episodes_per_iteration)):
                 scheduler.reset()
                 self.env.reset()
                 ep_rew = 0
@@ -61,7 +64,10 @@ class IterativeRefinement:
                     ep_rew += reward
                     ep_data.append((observation.reshape(1, -1), action, reward, done))
 
-                    abstract_obs = self.dim_reduction_pipeline.transform(np.array([observation]))
+                    if self.dim_reduction_pipeline:
+                        abstract_obs = self.dim_reduction_pipeline.transform(np.array([observation]))
+                    else:
+                        abstract_obs = [observation.reshape(1, -1)]
 
                     reached_cluster = self.clustering_fun.predict(abstract_obs)[0]
                     reached_cluster = f'c{reached_cluster}'
@@ -74,8 +80,6 @@ class IterativeRefinement:
 
                         reached_cluster = f'{previous_cluster_count[0]}_{previous_cluster_count[1]}'
 
-                    if reward == '100':
-                        nums_goal_reached += 1
                     elif reached_cluster == goal_state:
                         num_goal_reached_iteration += 1
 
@@ -94,35 +98,45 @@ class IterativeRefinement:
                         print('Could not step in a model')
                         # if reached_cluster in scheduler.label_dict.keys():
                         #     scheduler.current_state = scheduler.label_dict[reached_cluster]
-
                         break
 
                     if done:
-                        if reward == 100 and goal_state == 'GOAL':
+
+                        if self.env_name == 'LunarLander-v2':
+                            if reward == '100':
+                                nums_goal_reached += 1
+                            else:
+                                num_crashes_per_iteration += 1
+                        elif self.env_name == 'MountainCar-v0' and len(ep_data) <= 200:
                             nums_goal_reached += 1
-                            print('Landed')
-                        if reward == -100:
-                            num_crashes_per_iteration += 1
                         break
 
                 ep_rewards.append(ep_rew)
-                print(f'Episode reward: {ep_rew}')
+                # print(f'Episode reward: {ep_rew}')
                 concrete_traces.append(ep_data)
 
             nums_goal_reached += num_goal_reached_iteration
             print(f'# Goal Reached : {num_goal_reached_iteration} / {episodes_per_iteration}')
             print(f'# Crashes  : {num_crashes_per_iteration} / {episodes_per_iteration}')
-            print(f'Mean ep. reward: {mean(ep_rewards)}')
+            print(f'Mean ep. reward: {mean(ep_rewards)} +- {np.std(ep_rewards, ddof=1)}')
+
+            if num_goal_reached_iteration / episodes_per_iteration >= early_stopping:
+                print(f"Stopping iteration loop as early stopping criterion (>= {early_stopping}) is met.")
+                return
 
             # refine model
             observation_space, action_space = get_observations_and_actions(concrete_traces)
-            reduced_dim_obs_space = self.dim_reduction_pipeline.transform(observation_space)
+            if self.dim_reduction_pipeline:
+                reduced_dim_obs_space = self.dim_reduction_pipeline.transform(observation_space)
+            else:
+                reduced_dim_obs_space = observation_space
             cluster_labels = self.clustering_fun.predict(reduced_dim_obs_space)
 
-            iteration_abstract_traces = create_abstract_traces(concrete_traces, cluster_labels)
+            iteration_abstract_traces = create_abstract_traces(self.env_name, concrete_traces, cluster_labels)
 
             self.abstract_traces.extend(iteration_abstract_traces)
             self.model = run_JAlergia(self.abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
                                       optimize_for='accuracy')
 
             print(f'Refinement {refinement_iteration + 1} model size: {self.model.size} states')
+            print('-' * 30)
