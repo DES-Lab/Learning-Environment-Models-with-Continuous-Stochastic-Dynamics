@@ -84,7 +84,8 @@ class IterativeRefinement:
                         num_goal_reached_iteration += 1
 
                     if self.scheduler_type == 'probabilistic':
-                        weighted_clusters = compute_weighted_clusters(abstract_obs, self.clustering_fun,
+                        weighted_clusters = compute_weighted_clusters(scheduler, abstract_obs, scheduler_input,
+                                                                      self.clustering_fun,
                                                                       len(set(self.clustering_fun.labels_)))
 
                         step_successful = scheduler.step_to(scheduler_input, weighted_clusters)
@@ -112,7 +113,7 @@ class IterativeRefinement:
                         break
 
                 ep_rewards.append(ep_rew)
-                # print(f'Episode reward: {ep_rew}')
+                print(f'Episode reward: {ep_rew}')
                 concrete_traces.append(ep_data)
 
             nums_goal_reached += num_goal_reached_iteration

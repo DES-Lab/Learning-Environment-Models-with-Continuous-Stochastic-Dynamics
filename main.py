@@ -23,7 +23,7 @@ agent_names = None
 
 if env_name == 'LunarLander-v2':
     agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-elif env_name == 'MountainCar-v0':
+elif env_name == 'MountainCar-v0': # power scaler, 48 clusters
     agent = load_agent('sb3/dqn-MountainCar-v0', 'dqn-MountainCar-v0.zip', DQN)
     # dqn_agent2 = load_agent('DBusAI/DQN-MountainCar-v0', 'DQN-MountainCar-v0.zip', DQN)
     # ppo_agent = load_agent('vukpetar/ppo-MountainCar-v0', 'ppo-mountaincar-v0.zip', PPO)
@@ -45,6 +45,7 @@ traces_file_name = f'{env_name}_{num_traces}_traces'
 traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN' )
 
 obs, actions = get_observations_and_actions(traces)
+#transformed = obs
 #ae = AutoencoderDimReduction(4, 10,)
 dim_red_pipeline = PipelineWrapper(env_name, num_traces, [('scaler', StandardScaler()),
                                                           ('lda_4', LinearDiscriminantAnalysis(n_components=3)),])
@@ -55,11 +56,11 @@ k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clu
 
 abstract_traces = create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=count_observations)
 
-model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', optimize_for='accuracy')
+model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', heap_memory='-Xmx14G', optimize_for='accuracy')
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
                          scheduler_type='probabilistic', count_observations=count_observations)
 
-ir.iteratively_refine_model(50, 20)
+ir.iteratively_refine_model(50, 50)
 
 ir.model.save(f'final_model_{env_name}')

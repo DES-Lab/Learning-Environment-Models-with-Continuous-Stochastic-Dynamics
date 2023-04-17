@@ -4,6 +4,7 @@ import random
 from collections import defaultdict
 from math import sqrt
 from pathlib import Path
+from statistics import mean
 from typing import Dict
 
 import aalpy.paths
@@ -455,14 +456,23 @@ class PrismSchedulerParser:
         return scheduler
 
 
-def compute_weighted_clusters(conc_obs, clustering_function, nr_outputs):
+def compute_weighted_clusters(scheduler, conc_obs, action, clustering_function, nr_outputs):
     cluster_distances = clustering_function.transform(conc_obs).tolist()[0]
-    cluster_distances = sorted(list(map(lambda ind_c: (f"c{ind_c[0]}", ind_c[1]),
-                                        enumerate(cluster_distances))),
-                               key=lambda x: x[1])
+
+    filter = set()
+    for (s, certainty) in scheduler.current_state:
+        possible_successors = scheduler._poss_step_to(s, action)
+        for (succ, labels, prob) in possible_successors:
+            for l in labels:
+                if l.startswith('c'):
+                    filter.add(l)
+
+    cluster_distances = sorted(
+        [(f"c{ind_c[0]}", ind_c[1]) for ind_c in enumerate(cluster_distances) if f"c{ind_c[0]}" in filter],
+        key=lambda x: x[1])
 
     nr_clusters = len(cluster_distances)
-    avg_distance = sum([ind_c[1] for ind_c in cluster_distances]) / nr_clusters
+    avg_distance = mean([ind_c[1] for ind_c in cluster_distances])
     variance = (sum([(ind_c[1] - avg_distance) ** 2 for ind_c in cluster_distances]) / nr_clusters)
     cluster_distances = cluster_distances[0:nr_outputs]
     weighted_clusters = dict([(v[0],

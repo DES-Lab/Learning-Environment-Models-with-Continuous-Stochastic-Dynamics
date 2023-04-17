@@ -140,7 +140,7 @@ print('Number of obs/action pairs', len(obs_action_pairs))
 # obs_action_pairs = get_same_action_sequential_mean(episodes)
 # print('Pruned', len(obs_action_pairs))
 
-evaluate_on_environment(env, obs_action_pairs, num_episodes=10, render=False)
+evaluate_on_environment(env, obs_action_pairs, num_episodes=10, render=True)
 
 # k_means = CustomKMeans([x[0] for x in obs_action_pairs])
 # cluster_labels = []
