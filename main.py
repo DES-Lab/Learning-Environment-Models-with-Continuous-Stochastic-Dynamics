@@ -22,7 +22,7 @@ if environment == 'LunarLander-v2':
 # print('Agents loaded')
 
 num_traces = 2500
-num_clusters = 128
+num_clusters = 1024
 scale = True
 
 env = gym.make(environment, )

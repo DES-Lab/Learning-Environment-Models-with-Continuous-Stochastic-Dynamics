@@ -15,7 +15,7 @@ from stable_baselines3 import DQN, A2C, PPO
 from utils import load
 
 num_traces = 2500
-num_clusters = 128
+num_clusters = 1024
 scale = True
 include_reward = False
 environment = 'LunarLander-v2'

@@ -167,7 +167,7 @@ class ProbabilisticScheduler:
 
         succs.sort(key=lambda x : x[1],reverse=True)
 
-        cert_sum = sum(map(lambda v : v[1], succs))
+        cert_sum = sum([v[1] for v in succs])
         if len(succs) == 0 or cert_sum == 0:
             # print("State size is zero!")
             return False
@@ -460,8 +460,10 @@ def compute_weighted_clusters(conc_obs,clustering_function,nr_outputs):
     # print(cluster_distances[-10:])
 
     nr_clusters = len(cluster_distances)
-    avg_distance = sum(map(lambda ind_c : ind_c[1],cluster_distances))/nr_clusters
-    variance = (sum(map(lambda ind_c : (ind_c[1] - avg_distance)**2,cluster_distances))/nr_clusters)
+    avg_distance = sum([ind_c[1] for ind_c in cluster_distances])/nr_clusters
+    # avg_distance = sum(map(lambda ind_c : ind_c[1],cluster_distances))/nr_clusters
+    # variance = (sum(map(lambda ind_c : (ind_c[1] - avg_distance)**2,cluster_distances))/nr_clusters)
+    variance = (sum([(ind_c[1] - avg_distance)**2 for ind_c in cluster_distances])/nr_clusters)
     # moved three lines down
     cluster_distances = cluster_distances[0:nr_outputs]
     # print(avg_distance)
@@ -472,11 +474,15 @@ def compute_weighted_clusters(conc_obs,clustering_function,nr_outputs):
     #                             (1-norm.cdf((v[1] - avg_distance) ** 2 / (2 * std_dev_squared))) / 2),
     #                              cluster_distances))
     cluster = f"c{clustering_function.predict(conc_obs).item()}"
-    weighted_clusters = dict(map(lambda v: (v[0],
+    # weighted_clusters = dict(map(lambda v: (v[0],
+    #                             1-norm.cdf(v[1],loc=avg_distance,
+    #                                      scale=sqrt(variance)
+    #                              )),
+    #                              cluster_distances))
+    weighted_clusters = dict([(v[0],
                                 1-norm.cdf(v[1],loc=avg_distance,
                                          scale=sqrt(variance)
-                                 )),
-                                 cluster_distances))
+                                 )) for v in cluster_distances])
     # print(weighted_clusters)
     # print(f"Predicted cluster {cluster} with weight {weighted_clusters[cluster]}")
     return weighted_clusters
