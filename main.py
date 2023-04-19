@@ -59,7 +59,7 @@ abstract_traces = create_abstract_traces(env_name, traces, cluster_labels, count
 model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy')
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
-                         scheduler_type='deterministic', count_observations=count_observations)
+                         scheduler_type='probabilistic', count_observations=count_observations)
 
 ir.iteratively_refine_model(50, 50)
 
