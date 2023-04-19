@@ -81,6 +81,7 @@ class IterativeRefinement:
                         reached_cluster = f'{previous_cluster_count[0]}_{previous_cluster_count[1]}'
 
                     elif reached_cluster == goal_state:
+                        print('Target cluster reached.')
                         num_goal_reached_iteration += 1
 
                     if self.scheduler_type == 'probabilistic':
@@ -91,7 +92,7 @@ class IterativeRefinement:
                         step_successful = scheduler.step_to(scheduler_input, weighted_clusters)
                     else:
                         step_successful = scheduler.step_to(scheduler_input, reached_cluster)
-                        print(scheduler_input, reached_cluster)
+                        # print(scheduler_input, reached_cluster)
 
                     if not step_successful:
                         print('Num steps:', len(ep_data))
@@ -102,10 +103,10 @@ class IterativeRefinement:
                         break
 
                     if done:
-
                         if self.env_name == 'LunarLander-v2':
-                            if reward == '100':
-                                nums_goal_reached += 1
+                            if reward >= 80:
+                                print('Successfully landed.')
+                                num_goal_reached_iteration += 1
                             else:
                                 num_crashes_per_iteration += 1
                         elif self.env_name == 'MountainCar-v0' and len(ep_data) <= 200:
@@ -137,7 +138,7 @@ class IterativeRefinement:
 
             self.abstract_traces.extend(iteration_abstract_traces)
             self.model = run_JAlergia(self.abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
-                                      optimize_for='accuracy')
+                                      heap_memory='-Xmx12G', optimize_for='accuracy')
 
             print(f'Refinement {refinement_iteration + 1} model size: {self.model.size} states')
             print('-' * 30)
