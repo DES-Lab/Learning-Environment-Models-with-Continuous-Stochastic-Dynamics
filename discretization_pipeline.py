@@ -31,10 +31,15 @@ class PipelineWrapper(Pipeline):
         self.env_name = env_name
         self.num_traces = num_traces
         self.load_pipeline = load_pipeline
-        self.pipeline_name = f'{self.env_name}_num_traces_{self.num_traces}_' + '_'.join([i[0] for i in steps])
+        if self.steps:
+            self.pipeline_name = f'{self.env_name}_num_traces_{self.num_traces}_' + '_'.join([i[0] for i in steps])
+        else:
+            self.pipeline_name = 'no_pipeline'
         self.save_path = f'pickles/dim_reduction/{self.pipeline_name}.pk'
 
     def fit(self, X, y=None, **fit_params):
+        if not self.steps:
+            return
         if self.load_pipeline and os.path.exists(self.save_path):
             self.steps = load(self.save_path)
             print('Pipeline loaded.')
@@ -43,6 +48,11 @@ class PipelineWrapper(Pipeline):
 
         super(PipelineWrapper, self).fit(X, y, **fit_params)
         save(self.steps, self.save_path)
+
+    def transform(self, X):
+        if not self.steps:
+            return X
+        return super(PipelineWrapper, self).transform(X)
 
 
 class AutoencoderDimReduction(BaseEstimator, TransformerMixin):
