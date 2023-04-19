@@ -27,6 +27,7 @@ class IterativeRefinement:
 
         nums_goal_reached = 0
 
+        last_scheduler = None
         for refinement_iteration in range(num_iterations):
 
             # due to a bug in alergia
@@ -34,6 +35,13 @@ class IterativeRefinement:
             # Make model input complete
             self.model.make_input_complete('sink_state')
             scheduler = PrismInterface(goal_state, self.model).scheduler
+            if scheduler is None and last_scheduler:
+                scheduler = last_scheduler
+            elif scheduler is None and not last_scheduler:
+                print('Initial scheduler could not be computed.')
+                assert False
+
+            last_scheduler = scheduler
             if self.scheduler_type == 'probabilistic':
                 scheduler = ProbabilisticScheduler(scheduler, truly_probabilistic=True)
 

@@ -328,14 +328,17 @@ class PrismInterface:
         self.concrete_model_name = str(self.tmp_dir.absolute() / f"concrete_model_{destination}")
         self.property_val = 0
         self.call_prism()
-        self.parser = PrismSchedulerParser(self.adv_file_name, self.concrete_model_name + ".lab",
-                                           self.concrete_model_name + ".tra")
-        self.scheduler = Scheduler(self.parser.initial_state, self.parser.transition_dict,
-                                   self.parser.label_dict, self.parser.scheduler_dict)
-        os.remove(self.tmp_mdp_file)
-        os.remove(self.adv_file_name)
-        os.remove(self.concrete_model_name + ".lab")
-        os.remove(self.concrete_model_name + ".tra")
+        if os.path.exists(self.adv_file_name):
+            self.parser = PrismSchedulerParser(self.adv_file_name, self.concrete_model_name + ".lab",
+                                               self.concrete_model_name + ".tra")
+            self.scheduler = Scheduler(self.parser.initial_state, self.parser.transition_dict,
+                                       self.parser.label_dict, self.parser.scheduler_dict)
+            os.remove(self.tmp_mdp_file)
+            os.remove(self.adv_file_name)
+            os.remove(self.concrete_model_name + ".lab")
+            os.remove(self.concrete_model_name + ".tra")
+        else:
+            self.scheduler = None
 
     def create_mc_query(self):
         if type(self.destination) != list:
