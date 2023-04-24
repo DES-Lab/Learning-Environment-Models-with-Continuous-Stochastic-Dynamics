@@ -1,5 +1,17 @@
+import numpy as np
 from tqdm import tqdm
 
+from utils import CARTPOLE_CUTOFF
+
+
+def change_features_clustering(x):
+    transformed = np.zeros((x.shape[0],4))
+    # transformed[:x.shape[0], :x.shape[1]] = x
+    transformed[:, 0] = x[:, 0] + x[:,2]
+    transformed[:, 1] = x[:, 1] + x[:,3]
+    transformed[:, 2] = x[:, 4] + x[:,5]
+    transformed[:, 3] = x[:, 6] + x[:,7]
+    return transformed
 
 def create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=False):
     abstract_traces = []
@@ -8,6 +20,7 @@ def create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=
     print('Creating Alergia Traces')
     for trace in tqdm(traces):
         at = ['Init']  # initial
+        step = 0
         for _, action, rew, done in trace:
             abstract_obs = f'c{cluster_labels[i].item(0)}'
             if env_name == 'LunarLander-v2':
@@ -19,8 +32,9 @@ def create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=
                 if done and len(trace) < 200:
                     abstract_obs += '__succ'
             if env_name == 'CartPole-v1':
-                pass
-
+                if done and step >= CARTPOLE_CUTOFF:
+                    abstract_obs += '__succ'
+            step += 1
             at.extend((f'i{action.item(0)}', abstract_obs))
             i += 1
         abstract_traces.append(at)

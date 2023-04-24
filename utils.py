@@ -6,7 +6,7 @@ import random
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 
-
+CARTPOLE_CUTOFF = 100
 def compute_clusters(data, n_clusters):
     clustering_function = KMeans(n_clusters=n_clusters)
     clustering_function.fit(data)
@@ -75,13 +75,16 @@ def get_traces_from_policy(agent, env, num_episodes, agent_name,
 
         observation = env.reset()
         episode_trace = []
+        step = 0
         while True:
             if random.random() < curr_randomness:
                 action = random.randint(0, env.action_space.n - 1)
             else:
                 action, _ = agent.predict(observation)
             observation, reward, done, info = env.step(action)
-
+            if "CartPole" in env.unwrapped.spec.id and step >= CARTPOLE_CUTOFF:
+                done = True
+            step += 1
             episode_trace.append((observation.reshape(1, -1), action, reward, done))
 
             if done:

@@ -3,7 +3,7 @@ import gym
 from aalpy.learning_algs import run_JAlergia
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, PowerTransformer, FunctionTransformer
 from stable_baselines3 import DQN, PPO
 
 from agents import load_agent
@@ -11,12 +11,11 @@ from discretization_pipeline import get_observations_and_actions, AutoencoderDim
     get_k_means_clustering
 from iterative_refinement import IterativeRefinement
 from utils import get_traces_from_policy
-from trace_abstraction import create_abstract_traces
+from trace_abstraction import create_abstract_traces, change_features_clustering
 
+aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.7-linux64/bin/prism"
 
-aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
-
-env_name = "LunarLander-v2"
+env_name = "CartPole-v1"
 
 agents = None
 agent_names = None
@@ -35,20 +34,25 @@ else:
     print('Env not supported')
     assert False
 
-num_traces = 2500
-num_clusters = 32
+num_traces = 2000
+num_clusters = 512
 count_observations = False
 
 env = gym.make(env_name, )
 traces_file_name = f'{env_name}_{num_traces}_traces'
 
-traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN' )
+traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN',
+                                randomness_probabilities=(0, 0.05, 0.1, 0.15, 0.2))
 
 obs, actions = get_observations_and_actions(traces)
 #transformed = obs
 #ae = AutoencoderDimReduction(4, 10,)
-dim_red_pipeline = PipelineWrapper(env_name, num_traces, [('scaler', StandardScaler()),
-                                                          ('lda_4', LinearDiscriminantAnalysis(n_components=3)),])
+# dim_red_pipeline = PipelineWrapper(env_name, num_traces, [
+#                                                           ('change_features_clustering', FunctionTransformer(change_features_clustering)),
+#                                                           ("power",PowerTransformer())])
+dim_red_pipeline = PipelineWrapper(env_name, num_traces, [
+                                                          ("power",PowerTransformer())])
+# dim_red_pipeline = PipelineWrapper(env_name, num_traces, [('standard', StandardScaler()),])
 dim_red_pipeline.fit(obs, actions)
 
 transformed = dim_red_pipeline.transform(obs)
@@ -56,11 +60,12 @@ k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clu
 
 abstract_traces = create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=count_observations)
 
-model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', heap_memory='-Xmx12G', optimize_for='accuracy')
+model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', heap_memory='-Xmx12G',
+                     optimize_for='accuracy')
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
                          scheduler_type='probabilistic', count_observations=count_observations)
 
-ir.iteratively_refine_model(50, 50)
+ir.iteratively_refine_model(50, 200)
 
 ir.model.save(f'final_model_{env_name}')

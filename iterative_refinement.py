@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
-from utils import remove_nan
+from utils import remove_nan, CARTPOLE_CUTOFF
 from trace_abstraction import create_abstract_traces
 
 
@@ -51,7 +51,7 @@ class IterativeRefinement:
 
                 # previous cluster and counter used for counting
                 previous_cluster_count = None
-
+                step = 0
                 while True:
                     scheduler_input = scheduler.get_input()
                     if scheduler_input is None:
@@ -61,6 +61,9 @@ class IterativeRefinement:
                     action = np.array(int(scheduler_input[1:]))
 
                     observation, reward, done, _ = self.env.step(action)
+                    if "CartPole" in self.env_name and step >= CARTPOLE_CUTOFF:
+                        done = True
+                    step += 1
                     ep_rew += reward
                     ep_data.append((observation.reshape(1, -1), action, reward, done))
 
