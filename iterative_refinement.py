@@ -27,6 +27,7 @@ class IterativeRefinement:
 
         nums_goal_reached = 0
 
+        last_scheduler = None
         for refinement_iteration in range(num_iterations):
 
             # due to a bug in alergia
@@ -34,6 +35,13 @@ class IterativeRefinement:
             # Make model input complete
             self.model.make_input_complete('sink_state')
             scheduler = PrismInterface(goal_state, self.model).scheduler
+            if scheduler is None and last_scheduler:
+                scheduler = last_scheduler
+            elif scheduler is None and not last_scheduler:
+                print('Initial scheduler could not be computed.')
+                assert False
+
+            last_scheduler = scheduler
             if self.scheduler_type == 'probabilistic':
                 scheduler = ProbabilisticScheduler(scheduler, truly_probabilistic=True)
 
@@ -67,7 +75,7 @@ class IterativeRefinement:
                     ep_rew += reward
                     ep_data.append((observation.reshape(1, -1), action, reward, done))
 
-                    if self.dim_reduction_pipeline:
+                    if self.dim_reduction_pipeline is not None:
                         abstract_obs = self.dim_reduction_pipeline.transform(np.array([observation]))
                     else:
                         abstract_obs = [observation.reshape(1, -1)]
@@ -98,6 +106,8 @@ class IterativeRefinement:
                         # print(scheduler_input, reached_cluster)
 
                     if not step_successful:
+                        ep_rew += -5000
+
                         print('Num steps:', len(ep_data))
                         print('Reached cluster:', reached_cluster)
                         print('Could not step in a model')
@@ -131,7 +141,7 @@ class IterativeRefinement:
 
             # refine model
             observation_space, action_space = get_observations_and_actions(concrete_traces)
-            if self.dim_reduction_pipeline:
+            if self.dim_reduction_pipeline is not None:
                 reduced_dim_obs_space = self.dim_reduction_pipeline.transform(observation_space)
             else:
                 reduced_dim_obs_space = observation_space
