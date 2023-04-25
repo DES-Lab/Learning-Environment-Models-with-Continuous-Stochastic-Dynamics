@@ -1,18 +1,18 @@
+from collections import defaultdict
 from statistics import mean
 
 import numpy as np
 from aalpy.learning_algs import run_JAlergia
-from tqdm import tqdm
 
 from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
-from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL
 from trace_abstraction import create_abstract_traces
+from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL
 
 
 class IterativeRefinement:
     def __init__(self, env, env_name, initial_model, abstract_traces, dim_reduction_pipeline, clustering_fun,
-                 scheduler_type='probabilistic', count_observations=False):
+                 scheduler_type='probabilistic', count_observations=False, num_agent_steps=None, agent=None):
         assert scheduler_type in {'probabilistic', 'deterministic'}
         self.env = env
         self.env_name = env_name
@@ -23,7 +23,12 @@ class IterativeRefinement:
         self.scheduler_type = scheduler_type
         self.count_observations = count_observations
 
+        self.num_agent_steps = num_agent_steps
+        self.agent = agent
+
     def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=0.8):
+
+        results = defaultdict(dict)
 
         nums_goal_reached = 0
 
@@ -51,15 +56,24 @@ class IterativeRefinement:
             concrete_traces = []
 
             ep_rewards = []
-            for _ in tqdm(range(episodes_per_iteration)):
+            for episode_index in range(episodes_per_iteration):
                 scheduler.reset()
-                self.env.reset()
+                obs = self.env.reset()
                 ep_rew = 0
+
+                if self.num_agent_steps:
+                    for _ in range(int(self.num_agent_steps)):
+                        action, _ = self.agent.predict(obs)
+                        obs, rew, _, _ = self.env.step(action)
+                        ep_rew += rew
                 ep_data = []
 
                 # previous cluster and counter used for counting
                 previous_cluster_count = None
-                step = 0
+
+                num_steps_model = 0
+                add_info = ''
+
                 while True:
                     scheduler_input = scheduler.get_input()
                     if scheduler_input is None:
@@ -67,11 +81,14 @@ class IterativeRefinement:
                         break
 
                     action = np.array(int(scheduler_input[1:]))
-
+                    num_steps_model += 1
                     observation, reward, done, _ = self.env.step(action)
-                    if "CartPole" in self.env_name and step >= CARTPOLE_CUTOFF:
+                    # self.env.render()
+
+                    # add cutoff for Cartpole
+                    if "CartPole" in self.env_name and len(ep_data) >= CARTPOLE_CUTOFF:
                         done = True
-                    step += 1
+
                     ep_rew += reward
                     ep_data.append((observation.reshape(1, -1), action, reward, done))
 
@@ -107,29 +124,28 @@ class IterativeRefinement:
 
                     if not step_successful:
                         ep_rew += -5000
-
                         print('Num steps:', len(ep_data))
                         print('Reached cluster:', reached_cluster)
                         print('Could not step in a model')
-                        # if reached_cluster in scheduler.label_dict.keys():
-                        #     scheduler.current_state = scheduler.label_dict[reached_cluster]
                         break
 
                     if done:
                         if self.env_name == 'LunarLander-v2':
                             if reward >= 80:
-                                print('Successfully landed.')
+                                add_info += 'Successfully landed'
                                 num_goal_reached_iteration += 1
                             else:
                                 num_crashes_per_iteration += 1
-                        elif self.env_name == 'MountainCar-v0' and len(ep_data) <= 200:
-                            nums_goal_reached += 1
+                        elif self.env_name == 'MountainCar-v0' and len(ep_data) <= MOUNTAIN_CAR_GOAL:
+                            num_goal_reached_iteration += 1
+                            add_info += f'Goal Reached under {MOUNTAIN_CAR_GOAL} steps'
                         elif "Acrobot" in self.env_name and len(ep_data) <= ACROBOT_GOAL:
                             nums_goal_reached += 1
+                            add_info += f'Goal Reached under {ACROBOT_GOAL} steps'
                         break
 
                 ep_rewards.append(ep_rew)
-                print(f'Episode reward: {ep_rew}')
+                print(f'Episode {episode_index}/{episodes_per_iteration} reward: {ep_rew}, Model Steps {num_steps_model} {add_info}')
                 concrete_traces.append(ep_data)
 
             nums_goal_reached += num_goal_reached_iteration

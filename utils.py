@@ -8,6 +8,9 @@ from tqdm import tqdm
 
 CARTPOLE_CUTOFF = 100
 ACROBOT_GOAL = 100
+MOUNTAIN_CAR_GOAL = 130
+
+
 def compute_clusters(data, n_clusters):
     clustering_function = KMeans(n_clusters=n_clusters)
     clustering_function.fit(data)
@@ -97,8 +100,6 @@ def get_traces_from_policy(agent, env, num_episodes, agent_name,
     save(traces, traces_name)
 
     return traces
-
-
 
 
 def remove_nan(mdp):

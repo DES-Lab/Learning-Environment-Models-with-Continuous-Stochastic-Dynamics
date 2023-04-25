@@ -8,6 +8,7 @@ from sklearn.cluster import KMeans
 from sklearn.pipeline import Pipeline
 
 from autoencoder import AE
+from trace_abstraction import change_features_clustering
 from utils import load, save
 
 
@@ -26,15 +27,17 @@ def get_observations_and_actions(traces, include_reward=False):
 
 
 class PipelineWrapper(Pipeline):
-    def __init__(self, env_name, num_traces, steps, load_pipeline=True):
+    def __init__(self, env_name, num_traces, steps, prefix_len=None, load_pipeline=True):
         super().__init__(steps)
         self.env_name = env_name
         self.num_traces = num_traces
         self.load_pipeline = load_pipeline
+        self.prefix_len = f'prefix_cut_{prefix_len}_' if prefix_len else ''
         if self.steps:
-            self.pipeline_name = f'{self.env_name}_num_traces_{self.num_traces}_' + '_'.join([i[0] for i in steps])
+            self.pipeline_name = f'{self.prefix_len}{self.env_name}_num_traces_{self.num_traces}_' + '_'.join(
+                [i[0] for i in steps])
         else:
-            self.pipeline_name = 'no_pipeline'
+            self.pipeline_name = f'{env_name}_{num_traces}_no_pipeline'
         self.save_path = f'pickles/dim_reduction/{self.pipeline_name}.pk'
 
     def fit(self, X, y=None, **fit_params):
@@ -67,6 +70,15 @@ class AutoencoderDimReduction(BaseEstimator, TransformerMixin):
 
     def transform(self, X, y=None):
         return np.array([self.ae.encoder(torch.tensor(obs)).detach().numpy().tolist() for obs in X])
+
+
+class LunarLanderManualDimReduction(BaseEstimator, TransformerMixin):
+
+    def fit(self, X, y=None, **fit_params):
+        return
+
+    def transform(self, X, y=None):
+        return np.array([change_features_clustering(obs).tolist() for obs in X])
 
 
 def get_k_means_clustering(observations, n_clusters, dim_red_pipeline_name, reduced_samples=None, load_fun=True):

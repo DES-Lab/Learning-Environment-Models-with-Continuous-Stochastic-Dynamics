@@ -3,19 +3,19 @@ import gym
 from aalpy.learning_algs import run_JAlergia
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.preprocessing import StandardScaler, PowerTransformer, FunctionTransformer
+from sklearn.preprocessing import StandardScaler, PowerTransformer
 from stable_baselines3 import DQN, PPO
 
 from agents import load_agent
 from discretization_pipeline import get_observations_and_actions, AutoencoderDimReduction, PipelineWrapper, \
-    get_k_means_clustering
+    get_k_means_clustering, LunarLanderManualDimReduction
 from iterative_refinement import IterativeRefinement
 from utils import get_traces_from_policy
-from trace_abstraction import create_abstract_traces, change_features_clustering
+from trace_abstraction import create_abstract_traces
 
-aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.7-linux64/bin/prism"
+aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
-env_name = "Acrobot-v1"
+env_name = "LunarLander-v2"
 
 agents = None
 agent_names = None
@@ -24,7 +24,7 @@ if env_name == 'Acrobot-v1':
     agent = load_agent('sb3/ppo-Acrobot-v1', 'ppo-Acrobot-v1.zip', PPO)
 elif env_name == 'LunarLander-v2':
     agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-elif env_name == 'MountainCar-v0': # power scaler, 48 clusters
+elif env_name == 'MountainCar-v0':  # power scaler, 48 clusters
     agent = load_agent('sb3/dqn-MountainCar-v0', 'dqn-MountainCar-v0.zip', DQN)
     # dqn_agent2 = load_agent('DBusAI/DQN-MountainCar-v0', 'DQN-MountainCar-v0.zip', DQN)
     # ppo_agent = load_agent('vukpetar/ppo-MountainCar-v0', 'ppo-mountaincar-v0.zip', PPO)
@@ -36,25 +36,29 @@ else:
     print('Env not supported')
     assert False
 
-num_traces = 2000
-num_clusters = 512
+num_traces = 2500
+num_clusters = 64
 count_observations = False
 
 env = gym.make(env_name, )
 traces_file_name = f'{env_name}_{num_traces}_traces'
 
-traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN',
-                                randomness_probabilities=(0, 0.05, 0.1, 0.15, 0.2))
+traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN',)
+                                #randomness_probabilities=(0, 0.05, 0.1, 0.15, 0.2))
+
+prefix_size = 0
+for i, t in enumerate(traces):
+    traces[i] = t[prefix_size:]
 
 obs, actions = get_observations_and_actions(traces)
-#transformed = obs
-#ae = AutoencoderDimReduction(4, 10,)
-# dim_red_pipeline = PipelineWrapper(env_name, num_traces, [
-#                                                           ('change_features_clustering', FunctionTransformer(change_features_clustering)),
-#                                                           ("power",PowerTransformer())])
-dim_red_pipeline = PipelineWrapper(env_name, num_traces, [
-                                                          ("power",PowerTransformer())])
-# dim_red_pipeline = PipelineWrapper(env_name, num_traces, [('standard', StandardScaler()),])
+
+# transformed = obs
+# ae = AutoencoderDimReduction(4, 10,)
+dim_red_pipeline = PipelineWrapper(env_name, num_traces,
+                                   [('maunal_dim_reduction', LunarLanderManualDimReduction()), ],
+                                   # ('lda', LinearDiscriminantAnalysis(n_components=3),)],
+                                   prefix_len=prefix_size)
+
 dim_red_pipeline.fit(obs, actions)
 
 transformed = dim_red_pipeline.transform(obs)
@@ -68,6 +72,6 @@ model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
                          scheduler_type='probabilistic', count_observations=count_observations)
 
-ir.iteratively_refine_model(50, 200)
+results = ir.iteratively_refine_model(50, 200)
 
 ir.model.save(f'final_model_{env_name}')
