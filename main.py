@@ -15,7 +15,7 @@ from trace_abstraction import create_abstract_traces
 
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
-env_name = "MountainCar-v0"
+env_name = "Acrobot-v1"
 
 agents = None
 agent_names = None
@@ -56,15 +56,15 @@ if env_name == 'MountainCar-v0':
                                        [('powerTransformer', PowerTransformer()), ],)
 if env_name == 'LunarLander-v2':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                       [('scaler', StandardScaler),
+                                       [('scaler', StandardScaler()),
                                         ('manualMapper', LunarLanderManualDimReduction()), ],)
 if env_name == 'CartPole-v1':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
                                        [('powerTransformer', PowerTransformer()), ],)
 if env_name == 'Acrobot-v1':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                       [('scaler', StandardScaler),
-                                        ('lda2', LinearDiscriminantAnalysis(n_components=2))],)
+                                       [('scaler', StandardScaler()),
+                                        ('lda_2', LinearDiscriminantAnalysis(n_components=2))],)
 
 # fit and transform concrete traces
 dim_red_pipeline.fit(obs, actions)
@@ -81,4 +81,4 @@ ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline
                          scheduler_type='probabilistic')
 
 # run iterative refinement
-results = ir.iteratively_refine_model(50, 10)
+results = ir.iteratively_refine_model(50, 25)
