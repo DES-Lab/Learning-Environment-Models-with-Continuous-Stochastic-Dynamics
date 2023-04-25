@@ -191,6 +191,6 @@ class IterativeRefinement:
 
             print('-' * 45)
 
-            save(results, f'pickles/results/{self.exp_name}.pk')
+            save(results, f'pickles/results/{self.exp_name}_ri_{num_iterations}_ep_{episodes_per_iteration}.pk')
 
         return results
