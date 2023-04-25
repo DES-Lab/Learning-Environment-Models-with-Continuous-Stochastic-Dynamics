@@ -15,7 +15,7 @@ from trace_abstraction import create_abstract_traces
 
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
-env_name = "LunarLander-v2"
+env_name = "MountainCar-v0"
 
 agents = None
 agent_names = None
@@ -37,7 +37,7 @@ else:
     assert False
 
 num_traces = 2500
-num_clusters = 64
+num_clusters = 512
 count_observations = False
 
 env = gym.make(env_name, )
@@ -55,8 +55,7 @@ obs, actions = get_observations_and_actions(traces)
 # transformed = obs
 # ae = AutoencoderDimReduction(4, 10,)
 dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                   [('manual_dim_reduction', LunarLanderManualDimReduction()), ],
-                                   # ('lda', LinearDiscriminantAnalysis(n_components=3),)],
+                                   [('powerTransformer', PowerTransformer()), ],
                                    prefix_len=prefix_size)
 
 dim_red_pipeline.fit(obs, actions)

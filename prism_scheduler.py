@@ -462,19 +462,16 @@ class PrismSchedulerParser:
 def compute_weighted_clusters(scheduler, conc_obs, action, clustering_function, nr_outputs):
     cluster_distances = clustering_function.transform(conc_obs).tolist()[0]
 
-    # filter = set()
-    # for (s, certainty) in scheduler.current_state:
-    #     possible_successors = scheduler._poss_step_to(s, action)
-    #     for (succ, labels, prob) in possible_successors:
-    #         for l in labels:
-    #             if l.startswith('c'):
-    #                 filter.add(l)
+    reachable_clusters = set()
+    for (s, certainty) in scheduler.current_state:
+        possible_successors = scheduler._poss_step_to(s, action)
+        for (succ, labels, prob) in possible_successors:
+            for l in labels:
+                if l.startswith('c'):
+                    reachable_clusters.add(l)
 
-    # cluster_distances = sorted(
-    #     [(f"c{ind_c[0]}", ind_c[1]) for ind_c in enumerate(cluster_distances) if f"c{ind_c[0]}" in filter],
-    #     key=lambda x: x[1])
     cluster_distances = sorted(
-        [(f"c{ind_c[0]}", ind_c[1]) for ind_c in enumerate(cluster_distances)],
+        [(f"c{ind_c[0]}", ind_c[1]) for ind_c in enumerate(cluster_distances) if f"c{ind_c[0]}" in reachable_clusters],
         key=lambda x: x[1])
 
     nr_clusters = len(cluster_distances)
