@@ -24,54 +24,61 @@ if env_name == 'Acrobot-v1':
     agent = load_agent('sb3/ppo-Acrobot-v1', 'ppo-Acrobot-v1.zip', PPO)
 elif env_name == 'LunarLander-v2':
     agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
-elif env_name == 'MountainCar-v0':  # power scaler, 48 clusters
+elif env_name == 'MountainCar-v0':
     agent = load_agent('sb3/dqn-MountainCar-v0', 'dqn-MountainCar-v0.zip', DQN)
-    # dqn_agent2 = load_agent('DBusAI/DQN-MountainCar-v0', 'DQN-MountainCar-v0.zip', DQN)
-    # ppo_agent = load_agent('vukpetar/ppo-MountainCar-v0', 'ppo-mountaincar-v0.zip', PPO)
-    # ppo_agent2 = load_agent('format37/PPO-MountainCar-v0', 'PPO-Mlp.zip', PPO)
 elif env_name == 'CartPole-v1':
     agent = load_agent('sb3/ppo-CartPole-v1', 'ppo-CartPole-v1.zip', PPO)
-    # dqn_agent = load_agent('sb3/dqn-CartPole-v1', 'dqn-CartPole-v1.zip', DQN)
 else:
     print('Env not supported')
     assert False
 
+num_clusters_per_env = {'Acrobot-v1': 128, 'LunarLander-v2': 128,
+                        'MountainCar-v0': 128, 'CartPole-v1':128}
+
 num_traces = 2500
-num_clusters = 512
-count_observations = False
+num_clusters = num_clusters_per_env[env_name]
+include_randomness_in_sampling = True
 
 env = gym.make(env_name, )
 traces_file_name = f'{env_name}_{num_traces}_traces'
 
-traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN',)
-                                #randomness_probabilities=(0, 0.05, 0.1, 0.15, 0.2))
+randomness = (0, 0.05, 0.1, 0.15, 0.2) if include_randomness_in_sampling else (0,)
 
-prefix_size = 0
-for i, t in enumerate(traces):
-    traces[i] = t[prefix_size:]
+traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN',
+                                randomness_probabilities=(0, 0.05, 0.1, 0.15, 0.2))
+
 
 obs, actions = get_observations_and_actions(traces)
 
-# transformed = obs
-# ae = AutoencoderDimReduction(4, 10,)
-dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                   [('powerTransformer', PowerTransformer()), ],
-                                   prefix_len=prefix_size)
+dim_red_pipeline = None
+if env_name == 'MountainCar-v0':
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces,
+                                       [('powerTransformer', PowerTransformer()), ],)
+if env_name == 'LunarLander-v2':
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces,
+                                       [('scaler', StandardScaler),
+                                        ('manualMapper', LunarLanderManualDimReduction()), ],)
+if env_name == 'CartPole-v1':
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces,
+                                       [('powerTransformer', PowerTransformer()), ],)
+if env_name == 'Acrobot-v1':
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces,
+                                       [('scaler', StandardScaler),
+                                        ('lda2', LinearDiscriminantAnalysis(n_components=2))],)
 
+# fit and transform concrete traces
 dim_red_pipeline.fit(obs, actions)
-
 transformed = dim_red_pipeline.transform(obs)
-
+# get clustering function
 k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clusters, dim_red_pipeline.pipeline_name)
-
-abstract_traces = create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=count_observations)
-
+# create abstract traces
+abstract_traces = create_abstract_traces(env_name, traces, cluster_labels)
+# get initial model
 model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', heap_memory='-Xmx12G',
                      optimize_for='accuracy')
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
-                         scheduler_type='probabilistic', count_observations=count_observations)
+                         scheduler_type='probabilistic')
 
-results = ir.iteratively_refine_model(50, 200)
-
-ir.model.save(f'final_model_{env_name}')
+# run iterative refinement
+results = ir.iteratively_refine_model(50, 10)

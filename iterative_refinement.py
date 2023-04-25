@@ -1,5 +1,5 @@
 from collections import defaultdict
-from statistics import mean
+from statistics import mean, stdev
 
 import numpy as np
 from aalpy.learning_algs import run_JAlergia
@@ -7,7 +7,7 @@ from aalpy.learning_algs import run_JAlergia
 from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
 from trace_abstraction import create_abstract_traces
-from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL
+from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, mdp_to_state_setup, save
 
 
 class IterativeRefinement:
@@ -25,6 +25,9 @@ class IterativeRefinement:
 
         self.num_agent_steps = num_agent_steps
         self.agent = agent
+
+        self.exp_name = f'{dim_reduction_pipeline.pipeline_name}' \
+                        f'_n_clusters_{len(set(self.clustering_fun.labels_))}'
 
     def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=0.8):
 
@@ -145,13 +148,14 @@ class IterativeRefinement:
                         break
 
                 ep_rewards.append(ep_rew)
-                print(f'Episode {episode_index}/{episodes_per_iteration} reward: {ep_rew}, Model Steps {num_steps_model} {add_info}')
+                print(
+                    f'Episode {episode_index}/{episodes_per_iteration} reward: {ep_rew}, Model Steps {num_steps_model} {add_info}')
                 concrete_traces.append(ep_data)
 
             nums_goal_reached += num_goal_reached_iteration
             print(f'# Goal Reached : {num_goal_reached_iteration} / {episodes_per_iteration}')
             print(f'# Crashes  : {num_crashes_per_iteration} / {episodes_per_iteration}')
-            print(f'Mean ep. reward: {mean(ep_rewards)} +- {np.std(ep_rewards, ddof=1)}')
+            print(f'Mean ep. reward: {mean(ep_rewards)} +- {stdev(ep_rewards)}')
 
             if num_goal_reached_iteration / episodes_per_iteration >= early_stopping:
                 print(f"Stopping iteration loop as early stopping criterion (>= {early_stopping}) is met.")
@@ -172,4 +176,20 @@ class IterativeRefinement:
                                       heap_memory='-Xmx12G', optimize_for='accuracy')
 
             print(f'Refinement {refinement_iteration + 1} model size: {self.model.size} states')
-            print('-' * 30)
+
+            # save results
+            ep_lens = [len(e) for e in concrete_traces]
+            results[refinement_iteration]['reward'] = mean(ep_rewards), stdev(ep_rewards)
+            results[refinement_iteration]['model_size'] = self.model.size
+            results[refinement_iteration]['goal_reached'] = num_goal_reached_iteration
+            results[refinement_iteration]['goal_reached_percentage'] = num_goal_reached_iteration / episodes_per_iteration
+            results[refinement_iteration]['crash'] = num_crashes_per_iteration
+            results[refinement_iteration]['episode_len'] = mean(ep_lens), stdev(ep_lens)
+            results[refinement_iteration]['model'] = mdp_to_state_setup(self.model)
+            results[refinement_iteration]['iteration_episodes'] = episodes_per_iteration
+
+            print('-' * 45)
+
+            save(results, f'pickles/results/{self.exp_name}.pk')
+
+        return results

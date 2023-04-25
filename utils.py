@@ -120,3 +120,26 @@ def remove_nan(mdp):
             changed = True
             s.transitions.pop(input)
     return changed
+
+
+def mdp_to_state_setup(mdp):
+    state_setup_dict = {}
+
+    for s in mdp.states:
+        state_setup_dict[s.state_id] = (s.output, {k: [(node.state_id, prob) for node, prob in v]
+                                                   for k, v in s.transitions.items()})
+
+    return state_setup_dict
+
+
+def mdp_from_state_setup(state_setup):
+    from aalpy.automata import MdpState, Mdp
+    states_map = {key: MdpState(key, output=value[0]) for key, value in state_setup.items()}
+
+    for key, values in state_setup.items():
+        source = states_map[key]
+        for i, transitions in values[1].items():
+            for node, prob in transitions:
+                source.transitions[i].append((states_map[node], prob))
+
+    return Mdp(states_map['q0'], list(states_map.values()))
