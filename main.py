@@ -15,7 +15,7 @@ from trace_abstraction import create_abstract_traces
 
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
-env_name = "Acrobot-v1"
+env_name = "LunarLander-v2"
 
 agents = None
 agent_names = None

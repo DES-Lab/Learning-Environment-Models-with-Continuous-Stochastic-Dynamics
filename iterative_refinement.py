@@ -186,7 +186,8 @@ class IterativeRefinement:
             results[refinement_iteration]['crash'] = num_crashes_per_iteration
             results[refinement_iteration]['episode_len'] = mean(ep_lens), stdev(ep_lens)
             results[refinement_iteration]['model'] = mdp_to_state_setup(self.model)
-            results[refinement_iteration]['iteration_episodes'] = episodes_per_iteration
+            results[refinement_iteration]['learning_data'] = self.abstract_traces
+            results[refinement_iteration]['episodes_per_iteration'] = episodes_per_iteration
 
             print('-' * 45)
 
