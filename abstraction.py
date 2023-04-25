@@ -212,6 +212,8 @@ def create_label(nr_steps, cluster_label, cluster_label_int, done, env_name, las
         additional_labels.append("pos")
     elif "Mountain" in env_name and done and nr_steps < 200 and state[0][0] > 0:
         additional_labels.append("succ")
+    elif "Acrobot" in env_name and done and nr_steps < 500:
+        additional_labels.append("succ")
     elif done:
         additional_labels.append("DONE")
 

@@ -1,7 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 
-from utils import CARTPOLE_CUTOFF
+from utils import CARTPOLE_CUTOFF, ACROBOT_GOAL
 
 
 def change_features_clustering(x):
@@ -30,6 +30,9 @@ def create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=
                     abstract_obs = 'crash'
             if env_name == 'MountainCar-v0':
                 if done and len(trace) < 200:
+                    abstract_obs += '__succ'
+            if env_name == 'Acrobot-v1':
+                if done and len(trace) < ACROBOT_GOAL:
                     abstract_obs += '__succ'
             if env_name == 'CartPole-v1':
                 if done and step >= CARTPOLE_CUTOFF:

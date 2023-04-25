@@ -15,12 +15,14 @@ from trace_abstraction import create_abstract_traces, change_features_clustering
 
 aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.7-linux64/bin/prism"
 
-env_name = "CartPole-v1"
+env_name = "Acrobot-v1"
 
 agents = None
 agent_names = None
 
-if env_name == 'LunarLander-v2':
+if env_name == 'Acrobot-v1':
+    agent = load_agent('sb3/ppo-Acrobot-v1', 'ppo-Acrobot-v1.zip', PPO)
+elif env_name == 'LunarLander-v2':
     agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
 elif env_name == 'MountainCar-v0': # power scaler, 48 clusters
     agent = load_agent('sb3/dqn-MountainCar-v0', 'dqn-MountainCar-v0.zip', DQN)

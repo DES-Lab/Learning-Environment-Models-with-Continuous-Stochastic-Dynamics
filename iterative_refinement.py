@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from discretization_pipeline import get_observations_and_actions
 from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
-from utils import remove_nan, CARTPOLE_CUTOFF
+from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL
 from trace_abstraction import create_abstract_traces
 
 
@@ -123,6 +123,8 @@ class IterativeRefinement:
                             else:
                                 num_crashes_per_iteration += 1
                         elif self.env_name == 'MountainCar-v0' and len(ep_data) <= 200:
+                            nums_goal_reached += 1
+                        elif "Acrobot" in self.env_name and len(ep_data) <= ACROBOT_GOAL:
                             nums_goal_reached += 1
                         break
 

@@ -7,6 +7,7 @@ from sklearn.cluster import KMeans
 from tqdm import tqdm
 
 CARTPOLE_CUTOFF = 100
+ACROBOT_GOAL = 100
 def compute_clusters(data, n_clusters):
     clustering_function = KMeans(n_clusters=n_clusters)
     clustering_function.fit(data)
