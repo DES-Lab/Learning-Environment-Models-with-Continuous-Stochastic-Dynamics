@@ -55,13 +55,14 @@ obs, actions = get_observations_and_actions(traces)
 # transformed = obs
 # ae = AutoencoderDimReduction(4, 10,)
 dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                   [('maunal_dim_reduction', LunarLanderManualDimReduction()), ],
+                                   [('manual_dim_reduction', LunarLanderManualDimReduction()), ],
                                    # ('lda', LinearDiscriminantAnalysis(n_components=3),)],
                                    prefix_len=prefix_size)
 
 dim_red_pipeline.fit(obs, actions)
 
 transformed = dim_red_pipeline.transform(obs)
+
 k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clusters, dim_red_pipeline.pipeline_name)
 
 abstract_traces = create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=count_observations)

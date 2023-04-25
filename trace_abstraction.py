@@ -5,12 +5,14 @@ from utils import CARTPOLE_CUTOFF, ACROBOT_GOAL
 
 
 def change_features_clustering(x):
-    transformed = np.zeros((x.shape[0], 4))
+    if x.shape == (8,):
+        x = np.expand_dims(x, axis=0)
+    transformed = np.zeros(4)
     # transformed[:x.shape[0], :x.shape[1]] = x
-    transformed[:, 0] = x[:, 0] + x[:, 2]
-    transformed[:, 1] = x[:, 1] + x[:, 3]
-    transformed[:, 2] = x[:, 4] + x[:, 5]
-    transformed[:, 3] = x[:, 6] + x[:, 7]
+    transformed[0] = x[:, 0] + x[:, 2]
+    transformed[1] = x[:, 1] + x[:, 3]
+    transformed[2] = x[:, 4] + x[:, 5]
+    transformed[3] = x[:, 6] + x[:, 7]
     return transformed
 
 
