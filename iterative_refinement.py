@@ -29,7 +29,7 @@ class IterativeRefinement:
         self.exp_name = f'{dim_reduction_pipeline.pipeline_name}' \
                         f'_n_clusters_{len(set(self.clustering_fun.labels_))}'
 
-    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=0.8):
+    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=1.1):
 
         results = defaultdict(dict)
 
@@ -186,10 +186,15 @@ class IterativeRefinement:
             results[refinement_iteration]['crash'] = num_crashes_per_iteration
             results[refinement_iteration]['episode_len'] = mean(ep_lens), stdev(ep_lens)
             results[refinement_iteration]['model'] = mdp_to_state_setup(self.model)
-            results[refinement_iteration]['iteration_episodes'] = episodes_per_iteration
+            results[refinement_iteration]['episodes_per_iteration'] = episodes_per_iteration
+
+            if refinement_iteration == 0:
+                results[refinement_iteration]['learning_data'] = self.abstract_traces
+            else:
+                results[refinement_iteration]['learning_data'] = iteration_abstract_traces
 
             print('-' * 45)
 
-            save(results, f'pickles/results/{self.exp_name}.pk')
+            save(results, f'pickles/results/{self.exp_name}_ri_{num_iterations}_ep_{episodes_per_iteration}.pk')
 
         return results
