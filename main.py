@@ -1,3 +1,5 @@
+import os
+
 import aalpy.paths
 import gym
 from aalpy.learning_algs import run_JAlergia
@@ -13,7 +15,10 @@ from iterative_refinement import IterativeRefinement
 from utils import get_traces_from_policy
 from trace_abstraction import create_abstract_traces
 
-aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+if os.name == 'nt':
+    aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+else:
+    aalpy.paths.path_to_prism = "~/Programs/prism-4.7-linux64/bin/prism"
 
 env_name = "Acrobot-v1"
 
@@ -32,10 +37,10 @@ else:
     print('Env not supported')
     assert False
 
-num_clusters_per_env = {'Acrobot-v1': 128, 'LunarLander-v2': 128,
+num_clusters_per_env = {'Acrobot-v1': 128, 'LunarLander-v2': 512,
                         'MountainCar-v0': 128, 'CartPole-v1':128}
 
-num_traces = 2500
+num_traces = 1000
 num_clusters = num_clusters_per_env[env_name]
 include_randomness_in_sampling = True
 
@@ -55,16 +60,17 @@ if env_name == 'MountainCar-v0':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
                                        [('powerTransformer', PowerTransformer()), ],)
 if env_name == 'LunarLander-v2':
-    dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                       [('scaler', StandardScaler()),
-                                        ('manualMapper', LunarLanderManualDimReduction()), ],)
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces,[
+                                        ('manualMapper', LunarLanderManualDimReduction()),
+                                       ('powerTransformer', PowerTransformer()),],)
 if env_name == 'CartPole-v1':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
                                        [('powerTransformer', PowerTransformer()), ],)
 if env_name == 'Acrobot-v1':
-    dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                       [('scaler', StandardScaler()),
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces,[('powerTransformer', PowerTransformer()),
                                         ('lda_2', LinearDiscriminantAnalysis(n_components=2))],)
+    # dim_red_pipeline = PipelineWrapper(env_name, num_traces,
+    #                                    [('powerTransformer', PowerTransformer()), ],)
 
 # fit and transform concrete traces
 dim_red_pipeline.fit(obs, actions)
@@ -81,4 +87,4 @@ ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline
                          scheduler_type='probabilistic')
 
 # run iterative refinement
-results = ir.iteratively_refine_model(50, 25)
+results = ir.iteratively_refine_model(50, 50)

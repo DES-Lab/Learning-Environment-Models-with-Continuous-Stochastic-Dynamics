@@ -469,10 +469,15 @@ def compute_weighted_clusters(scheduler, conc_obs, action, clustering_function, 
             for l in labels:
                 if l.startswith('c'):
                     reachable_clusters.add(l)
-
-    cluster_distances = sorted(
-        [(f"c{ind_c[0]}", ind_c[1]) for ind_c in enumerate(cluster_distances) if f"c{ind_c[0]}" in reachable_clusters],
-        key=lambda x: x[1])
+    if len(reachable_clusters) <= 1:
+        cluster_distances = sorted(
+            [(f"c{ind_c[0]}", ind_c[1]) for ind_c in enumerate(cluster_distances)],
+            key=lambda x: x[1])
+    else:
+        if len(reachable_clusters) == 0:
+            return dict()
+        else:
+            return {list(reachable_clusters)[0]: 1}
 
     nr_clusters = len(cluster_distances)
     avg_distance = mean([ind_c[1] for ind_c in cluster_distances])
