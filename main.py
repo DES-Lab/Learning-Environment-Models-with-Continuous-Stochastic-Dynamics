@@ -18,7 +18,7 @@ from trace_abstraction import create_abstract_traces
 if os.name == 'nt':
     aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 else:
-    aalpy.paths.path_to_prism = "~/Programs/prism-4.7-linux64/bin/prism"
+    aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.7-linux64/bin/prism"
 
 env_name = "Acrobot-v1"
 
@@ -67,7 +67,7 @@ if env_name == 'CartPole-v1':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
                                        [('powerTransformer', PowerTransformer()), ],)
 if env_name == 'Acrobot-v1':
-    dim_red_pipeline = PipelineWrapper(env_name, num_traces,[('powerTransformer', PowerTransformer()),
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces,[('standard', StandardScaler()),
                                         ('lda_2', LinearDiscriminantAnalysis(n_components=2))],)
     # dim_red_pipeline = PipelineWrapper(env_name, num_traces,
     #                                    [('powerTransformer', PowerTransformer()), ],)
@@ -84,7 +84,7 @@ model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar
                      optimize_for='accuracy')
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
-                         scheduler_type='probabilistic', experiment_name_prefix='exp')
+                         scheduler_type='probabilistic', experiment_name_prefix='exp1')
 
 # run iterative refinement
 results = ir.iteratively_refine_model(50, 50)

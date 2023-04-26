@@ -469,9 +469,9 @@ def compute_weighted_clusters(scheduler, conc_obs, action, clustering_function, 
             for l in labels:
                 if l.startswith('c'):
                     reachable_clusters.add(l)
-    if len(reachable_clusters) <= 1:
+    if len(reachable_clusters) > 1:
         cluster_distances = sorted(
-            [(f"c{ind_c[0]}", ind_c[1]) for ind_c in enumerate(cluster_distances)],
+            [(f"c{ind_c[0]}", ind_c[1]) for ind_c in enumerate(cluster_distances) if f"c{ind_c[0]}" in reachable_clusters],
             key=lambda x: x[1])
     else:
         if len(reachable_clusters) == 0:
