@@ -41,7 +41,7 @@ def visualize_goal_and_crash(data, env_name):
 
 if __name__ == '__main__':
     # data = load('pickles/results/MountainCar-v0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_128.pk')
-    # data = load('pickles/results/Acrobot-v1_num_traces_2500_scaler_lda_2_n_clusters_128.pk')
-    data = load('pickles/results/LunarLander-v2_num_traces_1000_manualMapper_powerTransformer_n_clusters_128_ri_100_ep_50.pk')
+    data = load('pickles/results/Acrobot-v1_num_traces_2500_scaler_lda_2_n_clusters_128.pk')
+    # data = load('pickles/results/LunarLander-v2_num_traces_1000_manualMapper_powerTransformer_n_clusters_128_ri_100_ep_50.pk')
     visualize_rewards(data, 'LunarLander')
     visualize_goal_and_crash(data, 'LunarLander')

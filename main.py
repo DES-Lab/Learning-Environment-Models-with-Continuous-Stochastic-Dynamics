@@ -38,7 +38,7 @@ else:
     assert False
 
 num_clusters_per_env = {'Acrobot-v1': 128, 'LunarLander-v2': 512,
-                        'MountainCar-v0': 128, 'CartPole-v1':128}
+                        'MountainCar-v0': 128, 'CartPole-v1': 128}
 
 num_traces = 1000
 num_clusters = num_clusters_per_env[env_name]
@@ -52,23 +52,22 @@ randomness = (0, 0.05, 0.1, 0.15, 0.2) if include_randomness_in_sampling else (0
 traces = get_traces_from_policy(agent, env, num_episodes=num_traces, agent_name='DQN',
                                 randomness_probabilities=(0, 0.05, 0.1, 0.15, 0.2))
 
-
 obs, actions = get_observations_and_actions(traces)
 
 dim_red_pipeline = None
 if env_name == 'MountainCar-v0':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                       [('powerTransformer', PowerTransformer()), ],)
+                                       [('powerTransformer', PowerTransformer()), ], )
 if env_name == 'LunarLander-v2':
-    dim_red_pipeline = PipelineWrapper(env_name, num_traces,[
-                                        ('manualMapper', LunarLanderManualDimReduction()),
-                                       ('powerTransformer', PowerTransformer()),],)
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces, [
+        ('manualMapper', LunarLanderManualDimReduction()),
+        ('powerTransformer', PowerTransformer()), ], )
 if env_name == 'CartPole-v1':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                       [('powerTransformer', PowerTransformer()), ],)
+                                       [('powerTransformer', PowerTransformer()), ], )
 if env_name == 'Acrobot-v1':
-    dim_red_pipeline = PipelineWrapper(env_name, num_traces,[('powerTransformer', PowerTransformer()),
-                                        ('lda_2', LinearDiscriminantAnalysis(n_components=2))],)
+    dim_red_pipeline = PipelineWrapper(env_name, num_traces, [('powerTransformer', PowerTransformer()),
+                                                              ('lda_2', LinearDiscriminantAnalysis(n_components=2))], )
     # dim_red_pipeline = PipelineWrapper(env_name, num_traces,
     #                                    [('powerTransformer', PowerTransformer()), ],)
 
@@ -87,4 +86,4 @@ ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline
                          scheduler_type='probabilistic', experiment_name_prefix='exp')
 
 # run iterative refinement
-results = ir.iteratively_refine_model(50, 50)
+results = ir.iteratively_refine_model(50, 10)

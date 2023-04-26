@@ -6,7 +6,7 @@ import random
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 
-CARTPOLE_CUTOFF = 100
+CARTPOLE_CUTOFF = 200
 ACROBOT_GOAL = 100
 MOUNTAIN_CAR_GOAL = 130
 
