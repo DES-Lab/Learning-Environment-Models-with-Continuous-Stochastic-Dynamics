@@ -12,7 +12,8 @@ from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, 
 
 class IterativeRefinement:
     def __init__(self, env, env_name, initial_model, abstract_traces, dim_reduction_pipeline, clustering_fun,
-                 scheduler_type='probabilistic', count_observations=False, num_agent_steps=None, agent=None):
+                 scheduler_type='probabilistic', experiment_name_prefix='',
+                 count_observations=False, num_agent_steps=None, agent=None):
         assert scheduler_type in {'probabilistic', 'deterministic'}
         self.env = env
         self.env_name = env_name
@@ -26,10 +27,13 @@ class IterativeRefinement:
         self.num_agent_steps = num_agent_steps
         self.agent = agent
 
-        self.exp_name = f'{dim_reduction_pipeline.pipeline_name}' \
+        if experiment_name_prefix[-1] != '_':
+            experiment_name_prefix += '_'
+
+        self.exp_name = f'{experiment_name_prefix}{dim_reduction_pipeline.pipeline_name}' \
                         f'_n_clusters_{len(set(self.clustering_fun.labels_))}'
 
-    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=1.1):
+    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=1.1, ):
 
         results = defaultdict(dict)
 
@@ -182,14 +186,18 @@ class IterativeRefinement:
             results[refinement_iteration]['reward'] = mean(ep_rewards), stdev(ep_rewards)
             results[refinement_iteration]['model_size'] = self.model.size
             results[refinement_iteration]['goal_reached'] = num_goal_reached_iteration
-            results[refinement_iteration]['goal_reached_percentage'] = num_goal_reached_iteration / episodes_per_iteration
+            results[refinement_iteration][
+                'goal_reached_percentage'] = num_goal_reached_iteration / episodes_per_iteration
             results[refinement_iteration]['crash'] = num_crashes_per_iteration
             results[refinement_iteration]['episode_len'] = mean(ep_lens), stdev(ep_lens)
             results[refinement_iteration]['model'] = mdp_to_state_setup(self.model)
             results[refinement_iteration]['episodes_per_iteration'] = episodes_per_iteration
 
+            # add whole learning data and clustering and dim reduction pipeline only in
             if refinement_iteration == 0:
                 results[refinement_iteration]['learning_data'] = self.abstract_traces
+                results[refinement_iteration]['clustering_function'] = self.clustering_fun
+                results[refinement_iteration]['dim_red_pipeline'] = self.dim_reduction_pipeline
             else:
                 results[refinement_iteration]['learning_data'] = iteration_abstract_traces
 

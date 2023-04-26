@@ -84,7 +84,7 @@ model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar
                      optimize_for='accuracy')
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
-                         scheduler_type='probabilistic')
+                         scheduler_type='probabilistic', experiment_name_prefix='exp')
 
 # run iterative refinement
 results = ir.iteratively_refine_model(50, 50)
