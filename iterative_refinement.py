@@ -29,7 +29,7 @@ class IterativeRefinement:
         self.exp_name = f'{dim_reduction_pipeline.pipeline_name}' \
                         f'_n_clusters_{len(set(self.clustering_fun.labels_))}'
 
-    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=0.8):
+    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=1.1):
 
         results = defaultdict(dict)
 

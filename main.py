@@ -35,7 +35,7 @@ else:
 num_clusters_per_env = {'Acrobot-v1': 128, 'LunarLander-v2': 128,
                         'MountainCar-v0': 128, 'CartPole-v1':128}
 
-num_traces = 2500
+num_traces = 1000
 num_clusters = num_clusters_per_env[env_name]
 include_randomness_in_sampling = True
 
@@ -56,8 +56,8 @@ if env_name == 'MountainCar-v0':
                                        [('powerTransformer', PowerTransformer()), ],)
 if env_name == 'LunarLander-v2':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
-                                       [('scaler', StandardScaler()),
-                                        ('manualMapper', LunarLanderManualDimReduction()), ],)
+                                       [('manualMapper', LunarLanderManualDimReduction()),
+                                        ('powerTransformer', PowerTransformer())],)
 if env_name == 'CartPole-v1':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
                                        [('powerTransformer', PowerTransformer()), ],)
@@ -81,4 +81,4 @@ ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline
                          scheduler_type='probabilistic')
 
 # run iterative refinement
-results = ir.iteratively_refine_model(50, 25)
+results = ir.iteratively_refine_model(100, 50)

@@ -75,7 +75,7 @@ class AutoencoderDimReduction(BaseEstimator, TransformerMixin):
 class LunarLanderManualDimReduction(BaseEstimator, TransformerMixin):
 
     def fit(self, X, y=None, **fit_params):
-        return
+        return self
 
     def transform(self, X, y=None):
         return np.array([change_features_clustering(obs).tolist() for obs in X])
