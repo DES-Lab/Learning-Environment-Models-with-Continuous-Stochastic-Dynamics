@@ -186,6 +186,7 @@ class IterativeRefinement:
             # save results
             ep_lens = [len(e) for e in concrete_traces]
             results[self.current_iteration]['reward'] = mean(ep_rewards), stdev(ep_rewards)
+            results[self.current_iteration]['all_rewards'] = ep_rewards
             results[self.current_iteration]['model_size'] = self.model.size
             results[self.current_iteration]['goal_reached'] = num_goal_reached_iteration
             results[self.current_iteration][
