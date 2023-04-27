@@ -143,3 +143,20 @@ def mdp_from_state_setup(state_setup):
                 source.transitions[i].append((states_map[node], prob))
 
     return Mdp(states_map['q0'], list(states_map.values()))
+
+
+def elbow_method_for_clusters(observations, dim_red_method, num_clusters=(8, 16, 32, 64, 128, 256, 512),):
+    from discretization_pipeline import get_k_means_clustering
+    import matplotlib.pyplot as plt
+
+    distortions = []
+    for nc in num_clusters:
+        k_means_clustering, cluster_labels = get_k_means_clustering(observations, nc, 'tmp',
+                                                                    load_fun=False)
+        distortions.append(k_means_clustering.inertia_)
+
+    plt.plot(num_clusters, distortions, 'bx-')
+    plt.xlabel('k')
+    plt.ylabel('Distortion')
+    plt.title(f'The Elbow Method showing the optimal k with {dim_red_method}')
+    plt.show()
