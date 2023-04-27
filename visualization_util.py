@@ -108,7 +108,7 @@ if __name__ == '__main__':
     #     visualize_rewards(data, 'LunarLander')
     # visualize_goal_and_crash(data, 'LunarLander')
 
-    visualize_rewards(load('pickles/results/exp0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_25_ep_50.pk'), 'MC')
+    visualize_rewards(load('pickles/results/testest_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_3_ep_3.pk'), 'MC')
     # baseline_values = {'MountainCar': -105, 'Acrobot': - 100, 'Cartpole': 200}
     #
     # all_acrobat_data = [load(d) for d in cartpole_files]

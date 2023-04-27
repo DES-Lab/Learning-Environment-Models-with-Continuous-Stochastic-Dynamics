@@ -29,6 +29,8 @@ class IterativeRefinement:
         self.num_agent_steps = num_agent_steps
         self.agent = agent
 
+        self.results = defaultdict(dict)
+
         if experiment_name_prefix and experiment_name_prefix[-1] != '_':
             experiment_name_prefix += '_'
 
@@ -36,8 +38,6 @@ class IterativeRefinement:
                         f'_n_clusters_{len(set(self.clustering_fun.labels_))}'
 
     def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=1.1, ):
-
-        results = defaultdict(dict)
 
         nums_goal_reached = 0
 
@@ -181,36 +181,36 @@ class IterativeRefinement:
             self.model = run_JAlergia(self.abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
                                       heap_memory='-Xmx12G', optimize_for='accuracy')
 
-            print(f'Refinement {refinement_iteration + 1} model size: {self.model.size} states')
+            print(f'Refinement {self.current_iteration + 1} model size: {self.model.size} states')
 
             # save results
             ep_lens = [len(e) for e in concrete_traces]
-            results[self.current_iteration]['reward'] = mean(ep_rewards), stdev(ep_rewards)
-            results[self.current_iteration]['all_rewards'] = ep_rewards
-            results[self.current_iteration]['model_size'] = self.model.size
-            results[self.current_iteration]['goal_reached'] = num_goal_reached_iteration
-            results[self.current_iteration][
+            self.results[self.current_iteration]['reward'] = mean(ep_rewards), stdev(ep_rewards)
+            self.results[self.current_iteration]['all_rewards'] = ep_rewards
+            self.results[self.current_iteration]['model_size'] = self.model.size
+            self.results[self.current_iteration]['goal_reached'] = num_goal_reached_iteration
+            self.results[self.current_iteration][
                 'goal_reached_percentage'] = num_goal_reached_iteration / episodes_per_iteration
-            results[self.current_iteration]['crash'] = num_crashes_per_iteration
-            results[self.current_iteration]['episode_len'] = mean(ep_lens), stdev(ep_lens)
-            results[self.current_iteration]['model'] = mdp_to_state_setup(self.model)
-            results[self.current_iteration]['episodes_per_iteration'] = episodes_per_iteration
+            self.results[self.current_iteration]['crash'] = num_crashes_per_iteration
+            self.results[self.current_iteration]['episode_len'] = mean(ep_lens), stdev(ep_lens)
+            self.results[self.current_iteration]['model'] = mdp_to_state_setup(self.model)
+            self.results[self.current_iteration]['episodes_per_iteration'] = episodes_per_iteration
 
             # add whole learning data and clustering and dim reduction pipeline only in
-            if refinement_iteration == 0:
-                results[refinement_iteration]['learning_data'] = self.abstract_traces
-                results[refinement_iteration]['clustering_function'] = self.clustering_fun
-                results[refinement_iteration]['dim_red_pipeline'] = self.dim_reduction_pipeline
+            if self.current_iteration == 0:
+                self.results[refinement_iteration]['learning_data'] = self.abstract_traces
+                self.results[refinement_iteration]['clustering_function'] = self.clustering_fun
+                self.results[refinement_iteration]['dim_red_pipeline'] = self.dim_reduction_pipeline
             else:
-                results[self.current_iteration]['learning_data'] = iteration_abstract_traces
+                self.results[self.current_iteration]['learning_data'] = iteration_abstract_traces
 
             self.current_iteration += 1
 
             print('-' * 45)
 
-            save(results, f'pickles/results/{self.exp_name}_ri_{num_iterations}_ep_{episodes_per_iteration}.pk')
+            save(self.results, f'pickles/results/{self.exp_name}_ri_{num_iterations}_ep_{episodes_per_iteration}.pk')
 
-        return results
+        return self.results
 
 
 def restart_experiment(env, env_name, experiment_data, additional_refinement_iterations, episodes_per_iteration=None,
@@ -219,7 +219,7 @@ def restart_experiment(env, env_name, experiment_data, additional_refinement_ite
         episodes_per_iteration = experiment_data[0]['episodes_per_iteration']
 
     last_iter_index = max(list(experiment_data.keys()))
-    abstract_traces =experiment_data[0]['learning_data']
+    abstract_traces = experiment_data[0]['learning_data']
     model = mdp_from_state_setup(experiment_data[last_iter_index]['model'])
     dim_red_pipeline = experiment_data[0]['dim_red_pipeline']
     clustering_fun = experiment_data[0]['clustering_function']
@@ -229,7 +229,8 @@ def restart_experiment(env, env_name, experiment_data, additional_refinement_ite
                              clustering_fun=clustering_fun,
                              experiment_name_prefix=exp_name_prefix)
     ir.current_iteration = last_iter_index + 1
-    ir.iteratively_refine_model(additional_refinement_iterations, episodes_per_iteration,)
+    ir.results = experiment_data
+    ir.iteratively_refine_model(additional_refinement_iterations, episodes_per_iteration, )
 
 
 if __name__ == '__main__':
@@ -238,7 +239,7 @@ if __name__ == '__main__':
 
     aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
-    data = load('pickles/results/exp0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_25_ep_50.pk')
+    data = load('pickles/results/testexp0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_7_ep_3.pk')
     env_name = 'MountainCar-v0'
     env = gym.make(env_name, )
-    restart_experiment(env, env_name, data, additional_refinement_iterations=50)
+    restart_experiment(env, env_name, data, additional_refinement_iterations=3, exp_name_prefix='testest')
