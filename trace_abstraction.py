@@ -24,9 +24,11 @@ def create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=
     for trace in tqdm(traces):
         at = ['Init']  # initial
         step = 0
-        for _, action, rew, done in trace:
+        for obs, action, rew, done in trace:
             abstract_obs = f'c{cluster_labels[i].item(0)}'
             if env_name == 'LunarLander-v2':
+                if abs(obs[0][0]) <= 0.1 and abs(obs[0][1]):
+                    abstract_obs += '__close'
                 if rew == 100:
                     abstract_obs += '__succ'
                 if rew == -100:

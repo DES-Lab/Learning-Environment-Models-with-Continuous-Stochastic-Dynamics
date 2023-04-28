@@ -81,6 +81,29 @@ class LunarLanderManualDimReduction(BaseEstimator, TransformerMixin):
         return np.array([change_features_clustering(obs).tolist() for obs in X])
 
 
+class AcrobotManualDimReduction(BaseEstimator, TransformerMixin):
+
+    def change_features(self,x):
+        if x.shape == (6,):
+            x = np.expand_dims(x, axis=0)
+        transformed = np.zeros(4)
+        # transformed[:x.shape[0], :x.shape[1]] = x
+        # transformed[0] = np.arccos(x[:, 0]) + x[:, 4]
+        # transformed[1] = np.arcsin(x[:, 1]) + x[:, 4]
+        # transformed[2] = np.arccos(x[:, 2]) + x[:, 5]
+        # transformed[3] = np.arcsin(x[:, 3]) + x[:, 5]
+        transformed[0] = np.arctan(x[:, 0]/x[:, 1])
+        transformed[1] = np.arctan(x[:, 2]/x[:, 3])
+        transformed[2] = x[:, 4]
+        transformed[3] = x[:, 5]
+        return transformed
+    def fit(self, X, y=None, **fit_params):
+        return self
+
+    def transform(self, X, y=None):
+        return np.array([self.change_features(obs).tolist() for obs in X])
+
+
 def get_k_means_clustering(observations, n_clusters, dim_red_pipeline_name, reduced_samples=None, load_fun=True):
     cf_name = f'pickles/clustering/k_means_num_clusters_{n_clusters}_{dim_red_pipeline_name}.pk'
     if load_fun and os.path.exists(cf_name):
