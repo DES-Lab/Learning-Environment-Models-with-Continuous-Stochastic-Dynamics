@@ -25,6 +25,8 @@ def visualize_rewards_multiple_exp(experiments, env_name, baseline_val=None):
             if to_remove in rewards_per_round.keys():
                 rewards_per_round.pop(to_remove)
         refinement_rounds = min_rr
+    else:
+        refinement_rounds = refinement_rounds[0]
 
     mean_rew = np.array([mean(i) for i in rewards_per_round.values()])
     std_dev_rew = np.array([stdev(i) for i in rewards_per_round.values()])
@@ -108,8 +110,8 @@ if __name__ == '__main__':
     #     visualize_rewards(data, 'LunarLander')
     # visualize_goal_and_crash(data, 'LunarLander')
 
-    visualize_rewards(load('pickles/results/testest_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_3_ep_3.pk'), 'MC')
+    #visualize_rewards(load('pickles/results/testest_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_3_ep_3.pk'), 'MC')
     # baseline_values = {'MountainCar': -105, 'Acrobot': - 100, 'Cartpole': 200}
     #
-    # all_acrobat_data = [load(d) for d in cartpole_files]
-    # visualize_rewards_multiple_exp(all_acrobat_data, 'Cartpole', baseline_val=None)
+    all_acrobat_data = [load(f'pickles/results/final_exp{d}_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_128_ri_15_ep_50.pk') for d in range(5)]
+    visualize_rewards_multiple_exp(all_acrobat_data, 'Cartpole', baseline_val=200)
