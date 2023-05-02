@@ -1,5 +1,5 @@
 from collections import defaultdict
-from statistics import stdev, mean
+from statistics import stdev, mean, median, quantiles
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -7,7 +7,38 @@ import numpy as np
 from utils import load
 
 
-def visualize_rewards_multiple_exp(experiments, env_name, baseline_val=None):
+def get_iteration_averages(experiments, method):
+    assert method in {'mean_stddev', 'median_quantiles'}
+    if method == 'median_quantiles':
+        f1, f2 = median, quantiles
+    else:
+        f1, f2 = mean, stdev
+
+    iteration_round_data = defaultdict(list)
+    for e in experiments:
+        for iter_round, data in e.items():
+            iteration_round_data[iter_round].extend(data['all_rewards'])
+
+    for i in iteration_round_data.keys():
+        removed_dead_state_big_penalty = []
+        for r in iteration_round_data[i]:
+            if r < -3000:
+                removed_dead_state_big_penalty.append(-500)
+            else:
+                removed_dead_state_big_penalty.append(r)
+        iteration_round_data[i] = removed_dead_state_big_penalty
+
+    iteration_means, iteration_quantiles = dict(), dict()
+    for i, values in iteration_round_data.items():
+        iteration_means[i] = f1(values)
+        iteration_quantiles[i] = f2(values)
+        if method == 'median_quantiles':
+            iteration_quantiles[i] = iteration_quantiles[i][0] - iteration_quantiles[i][2]
+
+    return iteration_means, iteration_quantiles
+
+
+def visualize_experiment_runs(experiments, env_name, method, baseline_val=None):
     refinement_rounds = []
     rewards_per_round = defaultdict(list)
 
@@ -28,13 +59,14 @@ def visualize_rewards_multiple_exp(experiments, env_name, baseline_val=None):
     else:
         refinement_rounds = refinement_rounds[0]
 
-    mean_rew = np.array([mean(i) for i in rewards_per_round.values()])
-    std_dev_rew = np.array([stdev(i) for i in rewards_per_round.values()])
+    plot_value_1, plot_value_2 = get_iteration_averages(experiments, method)
+    plot_value_1 = np.array(list(plot_value_1.values()))
+    plot_value_2 = np.array(list(plot_value_2.values()))
 
     refinement_rounds = list(range(1, refinement_rounds + 2))
 
-    plt.plot(refinement_rounds, mean_rew, 'r-', label='Mean Reward')
-    plt.fill_between(refinement_rounds, mean_rew - std_dev_rew, mean_rew + std_dev_rew, color='b', alpha=0.2)
+    plt.plot(refinement_rounds, plot_value_1, 'r-', label='Mean Reward')
+    plt.fill_between(refinement_rounds, plot_value_1 - plot_value_2, plot_value_1 + plot_value_2, color='r', alpha=0.2)
 
     if baseline_val is not None:
         plt.plot(refinement_rounds, [baseline_val] * len(refinement_rounds), 'g-', label='RL baseline')
@@ -44,6 +76,40 @@ def visualize_rewards_multiple_exp(experiments, env_name, baseline_val=None):
     plt.legend()
 
     episodes_per_iter = experiments[0][0]["episodes_per_iteration"]
+    plt.title(f'{env_name}: {len(refinement_rounds)} Iterations of {episodes_per_iter} Episodes')
+
+    plt.show()
+
+
+def visualize_multiple_experiments(experiment_1, experiment_2, env_name, method, baseline_val=None):
+    exp_1_name, exp_2_name = experiment_1[0], experiment_2[0]
+
+    exp_1_plot_val_1, exp_1_plot_val_2 = get_iteration_averages(experiment_1[1], method)
+    exp_1_plot_val_1 = np.array(list(exp_1_plot_val_1.values()))
+    exp_1_plot_val_2 = np.array(list(exp_1_plot_val_2.values()))
+
+    exp_2_plot_val_1, exp_2_plot_val_2 = get_iteration_averages(experiment_2[1], method)
+    exp_2_plot_val_1 = np.array(list(exp_2_plot_val_1.values()))
+    exp_2_plot_val_2 = np.array(list(exp_2_plot_val_2.values()))
+
+    refinement_rounds = list(range(1, len(experiment_1[1][0].keys()) + 1))
+
+    plt.plot(refinement_rounds, exp_1_plot_val_1, 'r-', label=f'Mean Reward: {exp_1_name}')
+    plt.fill_between(refinement_rounds, exp_1_plot_val_1 - exp_1_plot_val_2, exp_1_plot_val_1 + exp_1_plot_val_2,
+                     color='r', alpha=0.2)
+
+    plt.plot(refinement_rounds, exp_2_plot_val_1, 'b-', label=f'Mean Reward: {exp_2_name}')
+    plt.fill_between(refinement_rounds, exp_2_plot_val_1 - exp_2_plot_val_2, exp_2_plot_val_1 + exp_2_plot_val_2,
+                     color='b', alpha=0.2)
+
+    if baseline_val is not None:
+        plt.plot(refinement_rounds, [baseline_val] * len(refinement_rounds), 'g-', label='RL baseline')
+
+    plt.xlabel('Refinement Round')
+    plt.ylabel('Reward')
+    plt.legend()
+
+    episodes_per_iter = experiment_1[1][0][0]["episodes_per_iteration"]
     plt.title(f'{env_name}: {len(refinement_rounds)} Iterations of {episodes_per_iter} Episodes')
 
     plt.show()
@@ -83,35 +149,49 @@ def visualize_goal_and_crash(data, env_name):
 
     plt.show()
 
+def load_all(files):
+    return [load(l) for l in files]
 
 if __name__ == '__main__':
-    # Cartpole experiments
-    cartpole_files = ['pickles/results/exp_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_128_ri_50_ep_50.pk',
-                      'pickles/results/exp2_CartPole-v1_num_traces_1000_powerTransformer_n_clusters_128_ri_12_ep_50.pk',
-                      'pickles/results/exp3_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_128_ri_12_ep_50.pk']
-
-    acrobot_files = [
-        'pickles/results/exp0_Acrobot-v1_num_traces_2500_powerTransformer_lda_2_n_clusters_128_ri_25_ep_50.pk'
-        , 'pickles/results/exp1_Acrobot-v1_num_traces_2500_powerTransformer_lda_2_n_clusters_128_ri_25_ep_50.pk'
-        , 'pickles/results/exp2_Acrobot-v1_num_traces_2500_powerTransformer_lda_2_n_clusters_128_ri_25_ep_50.pk'
-        , 'pickles/results/exp3_Acrobot-v1_num_traces_2500_powerTransformer_lda_2_n_clusters_128_ri_25_ep_50.pk'
-        , 'pickles/results/exp4_Acrobot-v1_num_traces_2500_powerTransformer_lda_2_n_clusters_128_ri_25_ep_50.pk']
-
+    cartpole_files = [
+        f'pickles/results/final_exp{i}_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_128_ri_15_ep_50.pk' for i
+        in range(5)]
     mountain_car_files = [
-        'pickles/results/exp0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_128_ri_25_ep_50.pk'
-        , 'pickles/results/exp1_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_128_ri_25_ep_50.pk'
-        , 'pickles/results/exp2_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_128_ri_25_ep_50.pk']
+        f'pickles/results/A_exp{i}_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_25_ep_50.pk' for i
+        in [0, 1, 2, 3, 6]]
+    acrobot_file_lda = [
+        f'pickles/results/A_exp{i}_Acrobot-v1_num_traces_2500_powerTransformer_lda_2_n_clusters_256_ri_25_ep_50.pk' for
+        i in range(10)]
+    acrobot_file_manual = [
+        f'pickles/results/A_exp{i}_Acrobot-v1_num_traces_2500_manualMapper_n_clusters_256_ri_25_ep_50.pk' for i in
+        range(10)]
+    lunar_lander_lda = [
+        f'pickles/results/lda_mexp{i + 1}_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
+        for i in range(5)]
+    lunar_lander_manual = [
+        f'pickles/results/mexp{i + 1}_LunarLander-v2_num_traces_2500_manualMapper_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
+        for i in range(5)]
 
-    # data = load('pickles/results/MountainCar-v0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_128.pk')
-    # data = load('pickles/results/Acrobot-v1_num_traces_2500_scaler_lda_2_n_clusters_128.pk')
+    # baseline_values = {'MountainCar': -105, 'Acrobot': - 100, 'Cartpole': 200}, LL: 280+-30
+
+    all_experiments = [load(l) for l in acrobot_file_manual]
+
+    # 'mean_stddev', 'median_quantiles'
+    # visualize_experiment_runs(all_experiments, 'LunarLander Manual', 'median_quantiles', -100)
+
+    method = 'mean_stddev'
+
+
+    exit()
+    visualize_multiple_experiments(('Manual Mapper', load_all(lunar_lander_manual)), ('LDA', load_all(lunar_lander_lda)),
+                                   env_name='Lunar Lander', method=method, baseline_val=250)
+    visualize_multiple_experiments(('Manual Mapper', load_all(acrobot_file_manual)), ('LDA', load_all(acrobot_file_lda)),
+                                   env_name='Acrobot', method=method, baseline_val=-100)
+
+    exit()
+    # for index, e in enumerate(all_experiments):
+    #     visualize_rewards(e, f'I: {index}')
+
+
     # data = load('pickles/results/LunarLander-v2_num_traces_1000_manualMapper_powerTransformer_n_clusters_128_ri_100_ep_50.pk')
-    # for f in acrobot_files:
-    #     data = load(f)
-    #     visualize_rewards(data, 'LunarLander')
     # visualize_goal_and_crash(data, 'LunarLander')
-
-    #visualize_rewards(load('pickles/results/testest_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_3_ep_3.pk'), 'MC')
-    # baseline_values = {'MountainCar': -105, 'Acrobot': - 100, 'Cartpole': 200}
-    #
-    all_acrobat_data = [load(f'pickles/results/final_exp{d}_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_128_ri_15_ep_50.pk') for d in range(5)]
-    visualize_rewards_multiple_exp(all_acrobat_data, 'Cartpole', baseline_val=200)
