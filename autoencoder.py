@@ -1,18 +1,7 @@
-import os
-import pickle
 from statistics import mean
 
-import aalpy.paths
-import gym
 import torch
-from stable_baselines3 import DQN
 from torch.utils.data import DataLoader
-
-from agents import load_agent
-from utils import load, get_traces_from_policy, save
-
-action_map = {0: 'no_action', 1: 'left_engine', 2: 'down_engine', 3: 'right_engine'}
-input_map = {v: k for k, v in action_map.items()}
 
 
 class AE(torch.nn.Module):

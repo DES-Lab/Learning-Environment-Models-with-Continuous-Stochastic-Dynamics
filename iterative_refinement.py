@@ -5,10 +5,10 @@ import numpy as np
 from aalpy.learning_algs import run_JAlergia
 
 from discretization_pipeline import get_observations_and_actions
-from prism_scheduler import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
+from schedulers import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
 from trace_abstraction import create_abstract_traces
-from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, mdp_to_state_setup, save, load, \
-    mdp_from_state_setup
+from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, save, load, \
+    mdp_to_state_setup, mdp_from_state_setup
 
 
 class IterativeRefinement:
@@ -231,15 +231,3 @@ def restart_experiment(env, env_name, experiment_data, additional_refinement_ite
     ir.current_iteration = last_iter_index + 1
     ir.results = experiment_data
     ir.iteratively_refine_model(additional_refinement_iterations, episodes_per_iteration, )
-
-
-if __name__ == '__main__':
-    import gym
-    import aalpy.paths
-
-    aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
-
-    data = load('pickles/results/testexp0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_256_ri_7_ep_3.pk')
-    env_name = 'MountainCar-v0'
-    env = gym.make(env_name, )
-    restart_experiment(env, env_name, data, additional_refinement_iterations=3, exp_name_prefix='testest')
