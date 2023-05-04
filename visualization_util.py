@@ -7,6 +7,13 @@ import numpy as np
 from utils import load
 
 
+def tikzplotlib_fix_ncols(obj):
+    if hasattr(obj, "_ncols"):
+        obj._ncol = obj._ncols
+    for child in obj.get_children():
+        tikzplotlib_fix_ncols(child)
+
+
 def get_iteration_averages(experiments, method):
     assert method in {'mean_stddev', 'median_quantiles'}
     if method == 'median_quantiles':
@@ -47,6 +54,8 @@ def visualize_experiment_runs(experiments, env_name, method, baseline_val=None):
 
     refinement_rounds = list(range(1, refinement_rounds + 2))
 
+    fig = plt.figure()
+
     plt.plot(refinement_rounds, plot_value_1, 'r-', label='Mean Reward')
     plt.fill_between(refinement_rounds, plot_value_1 - plot_value_2, plot_value_1 + plot_value_2, color='r', alpha=0.2)
 
@@ -76,6 +85,8 @@ def visualize_multiple_experiments(experiment_1, experiment_2, env_name, method,
 
     refinement_rounds = list(range(1, len(experiment_1[1][0].keys()) + 1))
 
+    fig = plt.figure()
+
     plt.plot(refinement_rounds, exp_1_plot_val_1, 'r-', label=f'Mean Reward: {exp_1_name}')
     plt.fill_between(refinement_rounds, exp_1_plot_val_1 - exp_1_plot_val_2, exp_1_plot_val_1 + exp_1_plot_val_2,
                      color='r', alpha=0.2)
@@ -85,7 +96,10 @@ def visualize_multiple_experiments(experiment_1, experiment_2, env_name, method,
                      color='b', alpha=0.2)
 
     if baseline_val is not None:
-        plt.plot(refinement_rounds, [baseline_val] * len(refinement_rounds), 'g-', label='RL baseline')
+        # plt.plot(refinement_rounds, [baseline_val] * len(refinement_rounds), 'g-', label='RL baseline')
+        plt.plot(refinement_rounds, [136] * len(refinement_rounds), 'gd', label='sb3-dqn')
+        plt.plot(refinement_rounds, [181] * len(refinement_rounds), 'gx', label='sb3-a2c')
+        plt.plot(refinement_rounds, [223] * len(refinement_rounds), 'g*', label='sb3-ppo')
 
     plt.xlabel('Refinement Round')
     plt.ylabel('Reward')
@@ -95,6 +109,10 @@ def visualize_multiple_experiments(experiment_1, experiment_2, env_name, method,
     plt.title(f'{env_name}: {len(refinement_rounds)} Iterations of {episodes_per_iter} Episodes')
 
     plt.show()
+
+    # import tikzplotlib
+    # tikzplotlib_fix_ncols(fig)
+    # tikzplotlib.save("figures/lunar_lander_comparison_mean.tex")
 
 
 def visualize_goal_and_crash(data, env_name):
