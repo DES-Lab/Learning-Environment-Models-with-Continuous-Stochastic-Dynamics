@@ -2,8 +2,10 @@
 This repository contains all code required to reproduce experiments reported in "Learning Environment Models with Continuous Stochastic Dynamics" paper.
 
 ## Reproducibility and Setup
+For the computation of schedulers install [Prism Model Checker](https://www.prismmodelchecker.org/).
+
 To reproduce all experiments, we recommend that you create a new Python virtual enviroment in which you can install all recquirements.
-Code has been tested with Python 3.9.
+Code has been tested with Python 3.9 and Prism 4.7.
 ```
 python -m venv .
 source myvenv/bin/activate // Linux and Mac
