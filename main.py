@@ -20,7 +20,7 @@ seed(101)
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
 # Choose the enviroment: one of {'Acrobot-v1','LunarLander-v2','MountainCar-v0','CartPole-v1'}
-env_name = "LunarLander-v2"
+env_name = "Acrobot-v1"
 
 agents = None
 agent_names = None
@@ -37,7 +37,7 @@ else:
     print('Env not supported')
     assert False
 
-num_clusters_per_env = {'Acrobot-v1': 512, 'LunarLander-v2': 512,
+num_clusters_per_env = {'Acrobot-v1': 256, 'LunarLander-v2': 512,
                         'MountainCar-v0': 128, 'CartPole-v1':128}
 
 # define a number of traces obtained by an agent
@@ -87,7 +87,7 @@ model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar
                      optimize_for='accuracy')
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
-                         scheduler_type='probabilistic', experiment_name_prefix=exp_name)
+                         scheduler_type='probabilistic', experiment_name_prefix='')
 
 # run iterative refinement
-results = ir.iteratively_refine_model(50, 50)
+results = ir.iteratively_refine_model(25, 50)
