@@ -144,3 +144,30 @@ def mdp_from_state_setup(state_setup):
 
     return Mdp(states_map['q0'], list(states_map.values()))
 
+
+def visualize_clusters(observations, cluster_fun):
+    from collections import defaultdict
+
+    cluster_obs_map = defaultdict(list)
+
+    for obs, cl in zip(observations, cluster_fun):
+        cluster_obs_map[cl].append(obs.tolist())
+
+    import matplotlib.pyplot as plt
+
+    goal_states = []
+    for v in cluster_obs_map.values():
+        for i in v:
+            if i[0] >= 0.5:
+                goal_states.append(i)
+                continue
+
+        t = [i for i in v if i not in goal_states]
+        plt.scatter([i[0] for i in t], [i[1] for i in t])
+
+    plt.scatter([i[0] for i in goal_states], [i[1] for i in goal_states], marker='x', c='k')
+    plt.xlabel('Position')
+    plt.ylabel('Velocity')
+    # plt.show()
+    import tikzplotlib
+    tikzplotlib.save("figures/demo_example_dim_red_mc.tex")
