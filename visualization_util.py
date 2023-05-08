@@ -1,3 +1,5 @@
+import os
+
 from collections import defaultdict
 from statistics import stdev, mean, median, quantiles
 
@@ -63,8 +65,6 @@ def get_iteration_averages(experiments, method):
 
 
 def visualize_experiment_runs(experiments, env_name, method, baseline_val=None):
-    refinement_rounds = []
-
     plot_value_1, plot_value_2 = get_iteration_averages(experiments, method)
     plot_value_1 = np.array(list(plot_value_1.values()))
     plot_value_2 = np.array(list(plot_value_2.values()))
@@ -195,6 +195,10 @@ def load_all(files):
 
 
 if __name__ == '__main__':
+    directory = "figures"
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     cartpole_128_clusters = [
         f'pickles/results/final_exp{i}_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_128_ri_15_ep_50.pk'
         for i in range(5)]
