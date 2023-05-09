@@ -8,8 +8,8 @@ We have used Java12(openjdk 12.0.2) run alergia.jar and Prism.
 To reproduce all experiments, we recommend that you create a new Python virtual enviroment in which you can install all recquirements.
 Code has been tested with Python 3.9 and Prism 4.7.
 ```
-python -m venv .
-source myvenv/bin/activate // Linux and Mac
+python -m venv myenv
+source myenv/bin/activate // Linux and Mac
 myenv\Scripts\activate.bat // Windows
 ```
 To install requirements:
@@ -24,3 +24,5 @@ python experiment_cmd_runner.py --path_to_prism "C:/Program Files/prism-4.7/bin/
 Alternatively, you can change variable values in `main.py` and execute any experiment from there. 
 
 To set a constant random seed for reproducibility, simply define an --seed argument or set the seed in the 'main.py' file.
+
+To visualize the results, parameterize and use visualization_util.py.
