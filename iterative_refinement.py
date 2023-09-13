@@ -117,9 +117,14 @@ class IterativeRefinement:
 
                         reached_cluster = f'{previous_cluster_count[0]}_{previous_cluster_count[1]}'
 
-                    elif reached_cluster == goal_state:
+                    if reached_cluster == goal_state:
                         print('Target cluster reached.')
                         num_goal_reached_iteration += 1
+
+                    if isinstance(goal_state, (list, tuple)) and reached_cluster in goal_state:
+                        print('Target cluster reached.')
+                        num_goal_reached_iteration += 1
+                        break
 
                     if self.scheduler_type == 'probabilistic':
                         weighted_clusters = compute_weighted_clusters(scheduler, abstract_obs, scheduler_input,
