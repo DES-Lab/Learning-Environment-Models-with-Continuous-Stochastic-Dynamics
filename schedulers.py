@@ -235,6 +235,21 @@ class PrismInterface:
         return self.property_val
 
 
+norm_look_up_table = dict()
+for i in range(-400,401,):
+    norm_look_up_table[i] = norm.cdf(i/100)
+
+
+def norm_cdf_approx(x):
+    if x < -4:
+        x = -400
+    elif x > 4:
+        x = 400
+    else:
+        x = round(x*100)
+    return norm_look_up_table[x]
+
+
 class PrismSchedulerParser:
     def __init__(self, scheduler_file, label_file, transition_file):
         with open(scheduler_file, "r") as f:
@@ -323,10 +338,16 @@ def compute_weighted_clusters(scheduler, conc_obs, action, clustering_function, 
     nr_clusters = len(cluster_distances)
     avg_distance = mean([ind_c[1] for ind_c in cluster_distances])
     variance = (sum([(ind_c[1] - avg_distance) ** 2 for ind_c in cluster_distances]) / nr_clusters)
+    if variance == 0:
+        variance = 1
     cluster_distances = cluster_distances[0:nr_outputs]
+    cluster_distances = [(v[0],(v[1] - avg_distance)/sqrt(variance)) for v in cluster_distances]
+    #
+    # weighted_clusters = dict([(v[0],
+    #                            1 - norm.cdf(v[1], loc=avg_distance,
+    #                                         scale=sqrt(variance)
+    #                                         )) for v in cluster_distances])
     weighted_clusters = dict([(v[0],
-                               1 - norm.cdf(v[1], loc=avg_distance,
-                                            scale=sqrt(variance)
-                                            )) for v in cluster_distances])
+                               1 - norm_cdf_approx(v[1])) for v in cluster_distances])
 
     return weighted_clusters

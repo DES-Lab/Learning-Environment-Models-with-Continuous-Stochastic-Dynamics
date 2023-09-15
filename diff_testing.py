@@ -5,14 +5,15 @@ import aalpy.paths
 import gym
 import numpy as np
 from scipy.stats import fisher_exact
-from stable_baselines3 import DQN, A2C
+from stable_baselines3 import DQN, A2C, PPO
 
 from agents import load_agent
 from iterative_refinement import IterativeRefinement
 from schedulers import PrismInterface, ProbabilisticScheduler, compute_weighted_clusters
 from utils import load, mdp_from_state_setup, remove_nan
 
-aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+# aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
 
 
 def get_cluster_frequency(abstract_traces):
@@ -85,52 +86,56 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
         if n1 > 0 and n2 > 0 and diff:
             print("Stopping early due to significant differance.")
             print(f'{agent_1} vs {agent_2}')
-            print(f"{f1 / n1} vs {f1 / n2}")
+            print(f"{f1 / n1} vs {f2 / n2}")
             break
-
         for agent_name, agent in agents_under_test:
-
-            scheduler.reset()
-            env.reset()
-            ep_rew = 0
-
+            had_success = False
             while True:
+                scheduler.reset()
+                env.reset()
+                ep_rew = 0
 
-                scheduler_input = scheduler.get_input()
-                if scheduler_input is None:
-                    print('Could not schedule an action.')
-                    break
+                while True:
 
-                action = np.array(int(scheduler_input[1:]))
+                    scheduler_input = scheduler.get_input()
+                    if scheduler_input is None:
+                        print('Could not schedule an action.')
+                        break
 
-                observation, reward, done, _ = env.step(action)
+                    action = np.array(int(scheduler_input[1:]))
 
-                ep_rew += reward
+                    observation, reward, done, _ = env.step(action)
 
-                if dim_reduction_pipeline is not None:
-                    abstract_obs = dim_reduction_pipeline.transform(np.array([observation]))
-                else:
-                    abstract_obs = [observation.reshape(1, -1)]
+                    ep_rew += reward
 
-                reached_cluster = clustering_fun.predict(abstract_obs)[0]
-                reached_cluster = f'c{reached_cluster}'
+                    if dim_reduction_pipeline is not None:
+                        abstract_obs = dim_reduction_pipeline.transform(np.array([observation]))
+                    else:
+                        abstract_obs = [observation.reshape(1, -1)]
 
-                if reached_cluster in target_clusters:
-                    if verbose:
-                        print('Target cluster reached.')
-                        print('Switching to an agent under test.')
-                    test_result = agent_suffix(agent, env, env_name, observation)
-                    agent_test_results[agent_name][test_result] += 1
+                    reached_cluster = np.argmin(clustering_fun.transform(abstract_obs)) #clustering_fun.predict(abstract_obs)[0]
+                    reached_cluster = f'c{reached_cluster}'
 
-                    num_successful_tests += 1
+                    if reached_cluster in target_clusters:
+                        if verbose:
+                            print('Target cluster reached.')
+                            print('Switching to an agent under test.')
+                        test_result = agent_suffix(agent, env, env_name, observation)
+                        agent_test_results[agent_name][test_result] += 1
 
-                weighted_clusters = compute_weighted_clusters(scheduler, abstract_obs, scheduler_input,
-                                                              clustering_fun,
-                                                              len(set(clustering_fun.labels_)))
+                        num_successful_tests += 1
+                        had_success = True
+                        break
 
-                step_successful = scheduler.step_to(scheduler_input, weighted_clusters)
+                    weighted_clusters = compute_weighted_clusters(scheduler, abstract_obs, scheduler_input,
+                                                                  clustering_fun,
+                                                                  len(set(clustering_fun.labels_)))
 
-                if not step_successful or done:
+                    step_successful = scheduler.step_to(scheduler_input, weighted_clusters)
+
+                    if not step_successful or done:
+                        break
+                if had_success:
                     break
 
     for agent_name, test_res in agent_test_results.items():
@@ -156,7 +161,7 @@ cluster_counter = get_cluster_frequency(abstract_traces)
 cluster_smallest_frequency = [x[0] for x in cluster_counter.most_common() if 'succ' not in x[0]]
 cluster_smallest_frequency.reverse()
 
-clusters_of_interest = cluster_smallest_frequency[100:105]
+clusters_of_interest = cluster_smallest_frequency[0:15]
 
 env_name = 'LunarLander-v2'
 env = gym.make(env_name, )
@@ -172,17 +177,22 @@ ir.results = experiment_data
 
 # model = ir.model
 
-agents_under_test = [('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
-                                                               'dqn-LunarLander-v2.zip', DQN)),
-                     ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
-                                                               'a2c-LunarLander-v2.zip', A2C)),
+agents_under_test = [
+    # ('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
+    #                                                            'dqn-LunarLander-v2.zip', DQN)),
+                     # ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
+                     #                                           'a2c-LunarLander-v2.zip', A2C)),
                      # ('sb3/dqn-LunarLander-v2', load_agent('sb3/dqn-LunarLander-v2',
                      #                                       'dqn-LunarLander-v2.zip', DQN)),
+                     ('sb3/a2c-LunarLander-v2', load_agent('sb3/a2c-LunarLander-v2',
+                                                           'a2c-LunarLander-v2.zip', A2C)),
+                     ('sb3/ppo-LunarLander-v2', load_agent('sb3/ppo-LunarLander-v2',
+                                                           'ppo-LunarLander-v2.zip', PPO)),
                      ]
 
 for target in clusters_of_interest:
     print(f'Testing Agents for {target}')
-    ir.iteratively_refine_model(1, 20, goal_state=[target])
+    ir.iteratively_refine_model(2, 50, goal_state=[target])
     model = ir.model
-    test_agents(env, env_name, model, agents_under_test, dim_red_pipeline, clustering_fun, [target],
-                num_tests_per_agent=20)
+    test_agents(env, env_name, model, agents_under_test, dim_red_pipeline, clustering_fun, [target],\
+                num_tests_per_agent=200)
