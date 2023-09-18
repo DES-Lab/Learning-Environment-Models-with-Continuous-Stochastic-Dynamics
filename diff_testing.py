@@ -12,10 +12,10 @@ from iterative_refinement import IterativeRefinement
 from schedulers import PrismInterface, ProbabilisticScheduler, compute_weighted_clusters
 from utils import load, mdp_from_state_setup, remove_nan, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, CARTPOLE_CUTOFF
 
-aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+# aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
 
-# aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
+aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
 
 
 def get_cluster_frequency(abstract_traces):
@@ -58,7 +58,7 @@ def agent_suffix(agent, env, env_name, last_observation, ep_steps):
             elif env_name == 'Acrobot-v1' or env_name == 'MountainCar-v0':
                 return suffix_steps
             elif env_name == 'CartPole-v1':
-                if ep_steps == CARTPOLE_CUTOFF:
+                if ep_steps >= CARTPOLE_CUTOFF:
                     return 'Pass'
                 return 'Fail'
             else:
@@ -114,7 +114,7 @@ def stop_based_on_statistics(results_dict, env_name):
 
 
 def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline, clustering_fun,
-                target_clusters, num_tests_per_agent=100, allowed_spurious_ration=0.2, verbose=True):
+                target_clusters, num_tests_per_agent=100, allowed_spurious_ration=0.9, verbose=True):
     assert len(agents_under_test) == 2
 
     if env_name == 'LunarLander-v2' or env_name == 'CartPole-v1':
@@ -137,6 +137,7 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
     total_test_num, spurious_tests_num, num_successful_tests = 0, 0, 0
 
     while num_successful_tests < num_tests_per_agent:
+        print("Tests: ", total_test_num,spurious_tests_num,num_successful_tests)
 
         stop_early_based_on_significant_differance = stop_based_on_statistics(test_results_per_agent, env_name)
         if stop_early_based_on_significant_differance:
@@ -152,7 +153,8 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
             # when true, execute tests with other agent
             switch_agent = False
             while True:
-
+                if total_test_num > 0 and total_test_num > 10 and spurious_tests_num / total_test_num > allowed_spurious_ration:
+                    break
                 total_test_num += 1
 
                 scheduler.reset()
@@ -224,7 +226,8 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
 
 
 # Load data from experiment run
-experiment_data_path = 'pickles/results/lda_mexp3_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
+# experiment_data_path = 'pickles/results/lda_mexp3_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
+experiment_data_path = 'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk'
 
 experiment_data = load(experiment_data_path)
 
@@ -239,9 +242,9 @@ cluster_counter = get_cluster_frequency(abstract_traces)
 cluster_smallest_frequency = [x[0] for x in cluster_counter.most_common() if 'succ' not in x[0]]
 cluster_smallest_frequency.reverse()
 
-clusters_of_interest = cluster_smallest_frequency[0:15]
+clusters_of_interest = cluster_smallest_frequency[0:20]
 
-env_name = 'LunarLander-v2'
+env_name = 'CartPole-v1'
 env = gym.make(env_name, )
 
 ir = IterativeRefinement(env=env, env_name=env_name, abstract_traces=abstract_traces,
@@ -255,7 +258,9 @@ ir.results = experiment_data
 
 # model = ir.model
 
-agents_under_test = [
+agents_under_test = []
+if "Lunar" in experiment_data_path:
+    agents_under_test.extend([
     # ('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
     #                                                            'dqn-LunarLander-v2.zip', DQN)),
     # ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
@@ -266,13 +271,23 @@ agents_under_test = [
                                           'a2c-LunarLander-v2.zip', A2C)),
     ('sb3/ppo-LunarLander-v2', load_agent('sb3/ppo-LunarLander-v2',
                                           'ppo-LunarLander-v2.zip', PPO)),
-]
+    ])
+if "CartPole" in experiment_data_path:
+    agents_under_test.extend([
+    ('sb3/ppo-CartPole-v1', load_agent('sb3/ppo-CartPole-v1',
+                                          'ppo-CartPole-v1.zip', PPO)),
+    ('sb3/a2c-CartPole-v1', load_agent('sb3/a2c-CartPole-v1',
+                                          'a2c-CartPole-v1.zip', A2C)),
+    ])
 
+max_refinements = 10
 num_learning_rounds, ep_per_round = 2, 50
 for target in clusters_of_interest:
+    refinements = 0
     while True:
         print(f'Retraining the model for {num_learning_rounds} learning rounds with {ep_per_round} episodes.')
         ir.iteratively_refine_model(num_learning_rounds, ep_per_round, goal_state=[target])
+        refinements += num_learning_rounds
         model = ir.model
         print(f'Testing {",".join([x[0] for x in agents_under_test])} for {target}:')
         successfully_stopped, results = test_agents(env, env_name, model, agents_under_test, dim_red_pipeline,
@@ -280,4 +295,7 @@ for target in clusters_of_interest:
                                                     num_tests_per_agent=200)
 
         if successfully_stopped:
+            break
+        elif refinements >= max_refinements:
+            print(f"Aborting {target} after {refinements} refinements")
             break
