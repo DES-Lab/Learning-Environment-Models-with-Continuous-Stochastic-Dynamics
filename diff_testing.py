@@ -1,4 +1,6 @@
 import copy
+import pickle
+import sys
 from collections import Counter, defaultdict
 
 import aalpy.paths
@@ -12,10 +14,8 @@ from iterative_refinement import IterativeRefinement
 from schedulers import PrismInterface, ProbabilisticScheduler, compute_weighted_clusters
 from utils import load, mdp_from_state_setup, remove_nan, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, CARTPOLE_CUTOFF
 
-# aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
-
-
-aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
+aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+# aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
 
 
 def get_cluster_frequency(abstract_traces):
@@ -283,6 +283,10 @@ if "CartPole" in experiment_data_path:
 max_refinements = 10
 num_learning_rounds, ep_per_round = 2, 50
 for target in clusters_of_interest:
+
+    output_file = open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}.txt', 'a')
+    sys.stdout = output_file
+
     refinements = 0
     while True:
         print(f'Retraining the model for {num_learning_rounds} learning rounds with {ep_per_round} episodes.')
@@ -295,7 +299,11 @@ for target in clusters_of_interest:
                                                     num_tests_per_agent=200)
 
         if successfully_stopped:
+            with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}.pickle', 'wb') as handle:
+                pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            output_file.close()
             break
         elif refinements >= max_refinements:
             print(f"Aborting {target} after {refinements} refinements")
+            output_file.close()
             break
