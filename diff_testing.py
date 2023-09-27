@@ -1,21 +1,30 @@
 import copy
 import pickle
+import random
 import sys
 from collections import Counter, defaultdict
+from statistics import mean
 
 import aalpy.paths
 import gym
 import numpy as np
+import torch
 from scipy.stats import fisher_exact, mannwhitneyu
 from stable_baselines3 import DQN, A2C, PPO
+from stable_baselines3.common.utils import obs_as_tensor
+from tqdm import tqdm
 
 from agents import load_agent
+from discretization_pipeline import get_observations_and_actions
 from iterative_refinement import IterativeRefinement
 from schedulers import PrismInterface, ProbabilisticScheduler, compute_weighted_clusters
+from trace_abstraction import create_abstract_traces
 from utils import load, mdp_from_state_setup, remove_nan, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, CARTPOLE_CUTOFF
 
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+
 # aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 def get_cluster_frequency(abstract_traces):
@@ -26,6 +35,74 @@ def get_cluster_frequency(abstract_traces):
             cluster_counter[c] += 1
 
     return cluster_counter
+
+
+def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num_episodes=1000):
+    randomness_probabilities = (0, 0.05, 0.1, 0.15, 0.2)
+    print('Executing agent policy and assigning importance to each cluster.')
+    rand_i = 0
+    concrete_traces = []
+    importance_list = []
+    for _ in tqdm(range(num_episodes)):
+        curr_randomness = randomness_probabilities[rand_i]
+
+        observation = env.reset()
+        episode_trace = []
+        step = 0
+        while True:
+            if random.random() < curr_randomness:
+                action = random.randint(0, env.action_space.n - 1)
+            else:
+                action, _ = dqn_agent.predict(observation)
+
+            observation, reward, done, info = env.step(action)
+
+            with torch.no_grad():
+                q_values = dqn_agent.q_net(obs_as_tensor(observation.reshape(1, -1), device=device))
+                q_values = q_values.detach().numpy().tolist()[0]
+                importance = max(q_values) - min(q_values)
+                importance_list.append(importance)
+
+            if "CartPole" in env.unwrapped.spec.id and step >= CARTPOLE_CUTOFF:
+                done = True
+
+            step += 1
+            episode_trace.append((observation.reshape(1, -1), action, reward, done))
+
+            if done:
+                concrete_traces.append(episode_trace)
+                break
+
+    observation_space, action_space = get_observations_and_actions(concrete_traces)
+    if dim_red_pipeline is not None:
+        reduced_dim_obs_space = dim_red_pipeline.transform(observation_space)
+    else:
+        reduced_dim_obs_space = observation_space
+    cluster_labels = clustering_function.predict(reduced_dim_obs_space)
+
+    abstract_traces = create_abstract_traces(env_name, concrete_traces, cluster_labels)
+
+    cluster_importance_map = defaultdict(list)
+    visited_cluster_index = 0
+    for trace in abstract_traces:
+        clusters = trace[2::2]
+        for c in clusters:
+            cluster_importance_map[c].append(importance_list[visited_cluster_index])
+            visited_cluster_index += 1
+
+    for k, v in cluster_importance_map.items():
+        cluster_importance_map[k] = mean(v), min(v), max(v)
+    sorted_dict = dict(sorted(cluster_importance_map.items(), key=lambda x: x[1][0], reverse=True))
+
+    clusters_with_biggest_mean_importance = []
+    for k, v in sorted_dict.items():
+        if 'close' not in k and 'succ' not in 'k':
+            clusters_with_biggest_mean_importance.append(k)
+
+        if len(clusters_with_biggest_mean_importance) == 10:
+            break
+
+    return clusters_with_biggest_mean_importance
 
 
 def diff_test(f1, n1, f2, n2, eps):
@@ -137,7 +214,7 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
     total_test_num, spurious_tests_num, num_successful_tests = 0, 0, 0
 
     while num_successful_tests < num_tests_per_agent:
-        print("Tests: ", total_test_num,spurious_tests_num,num_successful_tests)
+        print("Tests: ", total_test_num, spurious_tests_num, num_successful_tests)
 
         stop_early_based_on_significant_differance = stop_based_on_statistics(test_results_per_agent, env_name)
         if stop_early_based_on_significant_differance:
@@ -226,8 +303,8 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
 
 
 # Load data from experiment run
-# experiment_data_path = 'pickles/results/lda_mexp3_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
-experiment_data_path = 'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk'
+experiment_data_path = 'pickles/results/lda_mexp3_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
+# experiment_data_path = 'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk'
 
 experiment_data = load(experiment_data_path)
 
@@ -244,7 +321,7 @@ cluster_smallest_frequency.reverse()
 
 clusters_of_interest = cluster_smallest_frequency[0:20]
 
-env_name = 'CartPole-v1'
+env_name = 'LunarLander-v2'
 env = gym.make(env_name, )
 
 ir = IterativeRefinement(env=env, env_name=env_name, abstract_traces=abstract_traces,
@@ -261,24 +338,26 @@ ir.results = experiment_data
 agents_under_test = []
 if "Lunar" in experiment_data_path:
     agents_under_test.extend([
-    # ('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
-    #                                                            'dqn-LunarLander-v2.zip', DQN)),
-    # ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
-    #                                           'a2c-LunarLander-v2.zip', A2C)),
-    # ('sb3/dqn-LunarLander-v2', load_agent('sb3/dqn-LunarLander-v2',
-    #                                       'dqn-LunarLander-v2.zip', DQN)),
-    ('sb3/a2c-LunarLander-v2', load_agent('sb3/a2c-LunarLander-v2',
-                                          'a2c-LunarLander-v2.zip', A2C)),
-    ('sb3/ppo-LunarLander-v2', load_agent('sb3/ppo-LunarLander-v2',
-                                          'ppo-LunarLander-v2.zip', PPO)),
+        ('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
+                                                  'dqn-LunarLander-v2.zip', DQN)),
+        # ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
+        #                                           'a2c-LunarLander-v2.zip', A2C)),
+        # ('sb3/dqn-LunarLander-v2', load_agent('sb3/dqn-LunarLander-v2',
+        #                                       'dqn-LunarLander-v2.zip', DQN)),
+        ('sb3/a2c-LunarLander-v2', load_agent('sb3/a2c-LunarLander-v2',
+                                              'a2c-LunarLander-v2.zip', A2C)),
+        # ('sb3/ppo-LunarLander-v2', load_agent('sb3/ppo-LunarLander-v2',
+        #                                       'ppo-LunarLander-v2.zip', PPO)),
     ])
 if "CartPole" in experiment_data_path:
     agents_under_test.extend([
-    ('sb3/ppo-CartPole-v1', load_agent('sb3/ppo-CartPole-v1',
-                                          'ppo-CartPole-v1.zip', PPO)),
-    ('sb3/a2c-CartPole-v1', load_agent('sb3/a2c-CartPole-v1',
-                                          'a2c-CartPole-v1.zip', A2C)),
+        ('sb3/ppo-CartPole-v1', load_agent('sb3/ppo-CartPole-v1',
+                                           'ppo-CartPole-v1.zip', PPO)),
+        ('sb3/a2c-CartPole-v1', load_agent('sb3/a2c-CartPole-v1',
+                                           'a2c-CartPole-v1.zip', A2C)),
     ])
+
+clusters_of_interest = get_cluster_importance(agents_under_test[0][1], dim_red_pipeline, clustering_fun)
 
 max_refinements = 10
 num_learning_rounds, ep_per_round = 2, 50
