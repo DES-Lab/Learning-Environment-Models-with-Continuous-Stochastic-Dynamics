@@ -20,7 +20,7 @@ seed(101)
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
 # Choose the enviroment: one of {'Acrobot-v1','LunarLander-v2','MountainCar-v0','CartPole-v1'}
-env_name = "Acrobot-v1"
+env_name = "LunarLander-v2"
 
 agents = None
 agent_names = None
@@ -83,8 +83,7 @@ k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clu
 # create abstract traces
 abstract_traces = create_abstract_traces(env_name, traces, cluster_labels)
 # get initial model
-model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', heap_memory='-Xmx12G',
-                     optimize_for='accuracy')
+model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', heap_memory='-Xmx12G',)
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
                          scheduler_type='probabilistic', experiment_name_prefix='')

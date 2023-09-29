@@ -184,7 +184,7 @@ class IterativeRefinement:
 
             self.abstract_traces.extend(iteration_abstract_traces)
             self.model = run_JAlergia(self.abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
-                                      heap_memory='-Xmx12G', optimize_for='accuracy')
+                                      heap_memory='-Xmx12G')
 
             print(f'Refinement {self.current_iteration + 1} model size: {self.model.size} states')
 

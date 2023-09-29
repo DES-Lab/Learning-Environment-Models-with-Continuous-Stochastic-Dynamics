@@ -120,8 +120,7 @@ k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clu
 # create abstract traces
 abstract_traces = create_abstract_traces(env_name, traces, cluster_labels)
 # get initial model
-model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar=args.path_to_alergia, heap_memory='-Xmx12G',
-                     optimize_for='accuracy')
+model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar=args.path_to_alergia, heap_memory='-Xmx12G',)
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
                          scheduler_type='probabilistic', experiment_name_prefix=args.exp_prefix)
