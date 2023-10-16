@@ -1,0 +1,499 @@
+Retraining the model for 2 learning rounds with 100 episodes.
+Target cluster reached.
+Episode 0/100 reward: 4.0, Model Steps 4 
+Episode 1/100 reward: 12.0, Model Steps 12 
+Episode 2/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 3/100 reward: 3.0, Model Steps 3 
+Episode 4/100 reward: 12.0, Model Steps 12 
+Episode 5/100 reward: 15.0, Model Steps 15 
+Episode 6/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 7/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 8/100 reward: 2.0, Model Steps 2 
+Episode 9/100 reward: 12.0, Model Steps 12 
+Episode 10/100 reward: 17.0, Model Steps 17 
+Episode 11/100 reward: 16.0, Model Steps 16 
+Episode 12/100 reward: 11.0, Model Steps 11 
+Episode 13/100 reward: 15.0, Model Steps 15 
+Episode 14/100 reward: 12.0, Model Steps 12 
+Episode 15/100 reward: 13.0, Model Steps 13 
+Episode 16/100 reward: 14.0, Model Steps 14 
+Episode 17/100 reward: 15.0, Model Steps 15 
+Episode 18/100 reward: 14.0, Model Steps 14 
+Episode 19/100 reward: 12.0, Model Steps 12 
+Episode 20/100 reward: 12.0, Model Steps 12 
+Episode 21/100 reward: 15.0, Model Steps 15 
+Target cluster reached.
+Episode 22/100 reward: 4.0, Model Steps 4 
+Episode 23/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 24/100 reward: 3.0, Model Steps 3 
+Episode 25/100 reward: 14.0, Model Steps 14 
+Episode 26/100 reward: 13.0, Model Steps 13 
+Target cluster reached.
+Episode 27/100 reward: 4.0, Model Steps 4 
+Episode 28/100 reward: 12.0, Model Steps 12 
+Episode 29/100 reward: 11.0, Model Steps 11 
+Episode 30/100 reward: 13.0, Model Steps 13 
+Episode 31/100 reward: 11.0, Model Steps 11 
+Episode 32/100 reward: 12.0, Model Steps 12 
+Episode 33/100 reward: 16.0, Model Steps 16 
+Episode 34/100 reward: 14.0, Model Steps 14 
+Target cluster reached.
+Episode 35/100 reward: 4.0, Model Steps 4 
+Episode 36/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 37/100 reward: 3.0, Model Steps 3 
+Episode 38/100 reward: 12.0, Model Steps 12 
+Episode 39/100 reward: 14.0, Model Steps 14 
+Episode 40/100 reward: 12.0, Model Steps 12 
+Episode 41/100 reward: 11.0, Model Steps 11 
+Episode 42/100 reward: 16.0, Model Steps 16 
+Episode 43/100 reward: 15.0, Model Steps 15 
+Episode 44/100 reward: 11.0, Model Steps 11 
+Episode 45/100 reward: 13.0, Model Steps 13 
+Episode 46/100 reward: 15.0, Model Steps 15 
+Target cluster reached.
+Episode 47/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 48/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 49/100 reward: 2.0, Model Steps 2 
+Episode 50/100 reward: 12.0, Model Steps 12 
+Episode 51/100 reward: 42.0, Model Steps 42 
+Episode 52/100 reward: 14.0, Model Steps 14 
+Episode 53/100 reward: 12.0, Model Steps 12 
+Episode 54/100 reward: 15.0, Model Steps 15 
+Episode 55/100 reward: 13.0, Model Steps 13 
+Target cluster reached.
+Episode 56/100 reward: 7.0, Model Steps 7 
+Episode 57/100 reward: 16.0, Model Steps 16 
+Episode 58/100 reward: 17.0, Model Steps 17 
+Target cluster reached.
+Episode 59/100 reward: 5.0, Model Steps 5 
+Episode 60/100 reward: 12.0, Model Steps 12 
+Episode 61/100 reward: 18.0, Model Steps 18 
+Episode 62/100 reward: 13.0, Model Steps 13 
+Target cluster reached.
+Episode 63/100 reward: 2.0, Model Steps 2 
+Episode 64/100 reward: 13.0, Model Steps 13 
+Target cluster reached.
+Episode 65/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 66/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 67/100 reward: 4.0, Model Steps 4 
+Episode 68/100 reward: 15.0, Model Steps 15 
+Target cluster reached.
+Episode 69/100 reward: 2.0, Model Steps 2 
+Episode 70/100 reward: 15.0, Model Steps 15 
+Episode 71/100 reward: 16.0, Model Steps 16 
+Episode 72/100 reward: 12.0, Model Steps 12 
+Episode 73/100 reward: 16.0, Model Steps 16 
+Target cluster reached.
+Episode 74/100 reward: 2.0, Model Steps 2 
+Episode 75/100 reward: 12.0, Model Steps 12 
+Episode 76/100 reward: 17.0, Model Steps 17 
+Episode 77/100 reward: 16.0, Model Steps 16 
+Episode 78/100 reward: 16.0, Model Steps 16 
+Target cluster reached.
+Episode 79/100 reward: 2.0, Model Steps 2 
+Episode 80/100 reward: 11.0, Model Steps 11 
+Episode 81/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 82/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 83/100 reward: 3.0, Model Steps 3 
+Episode 84/100 reward: 12.0, Model Steps 12 
+Episode 85/100 reward: 13.0, Model Steps 13 
+Episode 86/100 reward: 14.0, Model Steps 14 
+Target cluster reached.
+Episode 87/100 reward: 4.0, Model Steps 4 
+Episode 88/100 reward: 14.0, Model Steps 14 
+Episode 89/100 reward: 11.0, Model Steps 11 
+Episode 90/100 reward: 15.0, Model Steps 15 
+Episode 91/100 reward: 14.0, Model Steps 14 
+Episode 92/100 reward: 11.0, Model Steps 11 
+Episode 93/100 reward: 12.0, Model Steps 12 
+Episode 94/100 reward: 14.0, Model Steps 14 
+Episode 95/100 reward: 12.0, Model Steps 12 
+Episode 96/100 reward: 11.0, Model Steps 11 
+Episode 97/100 reward: 12.0, Model Steps 12 
+Episode 98/100 reward: 12.0, Model Steps 12 
+Episode 99/100 reward: 11.0, Model Steps 11 
+# Goal Reached : 24 / 100
+# Crashes  : 0 / 100
+Mean ep. reward: 11.23 +- 5.56477921186166
+Creating Alergia Traces
+Warning: Loaded automaton is not input complete.
+Refinement 34 model size: 115 states
+---------------------------------------------
+Episode 0/100 reward: 14.0, Model Steps 14 
+Episode 1/100 reward: 13.0, Model Steps 13 
+Episode 2/100 reward: 12.0, Model Steps 12 
+Episode 3/100 reward: 20.0, Model Steps 20 
+Episode 4/100 reward: 14.0, Model Steps 14 
+Target cluster reached.
+Episode 5/100 reward: 5.0, Model Steps 5 
+Target cluster reached.
+Episode 6/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 7/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 8/100 reward: 4.0, Model Steps 4 
+Episode 9/100 reward: 27.0, Model Steps 27 
+Episode 10/100 reward: 20.0, Model Steps 20 
+Target cluster reached.
+Episode 11/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 12/100 reward: 3.0, Model Steps 3 
+Episode 13/100 reward: 15.0, Model Steps 15 
+Target cluster reached.
+Episode 14/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 15/100 reward: 3.0, Model Steps 3 
+Target cluster reached.
+Episode 16/100 reward: 6.0, Model Steps 6 
+Episode 17/100 reward: 13.0, Model Steps 13 
+Target cluster reached.
+Episode 18/100 reward: 2.0, Model Steps 2 
+Episode 19/100 reward: 17.0, Model Steps 17 
+Episode 20/100 reward: 13.0, Model Steps 13 
+Target cluster reached.
+Episode 21/100 reward: 2.0, Model Steps 2 
+Episode 22/100 reward: 18.0, Model Steps 18 
+Target cluster reached.
+Episode 23/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 24/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 25/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 26/100 reward: 2.0, Model Steps 2 
+Episode 27/100 reward: 17.0, Model Steps 17 
+Episode 28/100 reward: 17.0, Model Steps 17 
+Episode 29/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 30/100 reward: 5.0, Model Steps 5 
+Target cluster reached.
+Episode 31/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 32/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 33/100 reward: 4.0, Model Steps 4 
+Episode 34/100 reward: 17.0, Model Steps 17 
+Episode 35/100 reward: 19.0, Model Steps 19 
+Target cluster reached.
+Episode 36/100 reward: 3.0, Model Steps 3 
+Target cluster reached.
+Episode 37/100 reward: 4.0, Model Steps 4 
+Episode 38/100 reward: 20.0, Model Steps 20 
+Target cluster reached.
+Episode 39/100 reward: 4.0, Model Steps 4 
+Episode 40/100 reward: 18.0, Model Steps 18 
+Episode 41/100 reward: 17.0, Model Steps 17 
+Episode 42/100 reward: 12.0, Model Steps 12 
+Episode 43/100 reward: 11.0, Model Steps 11 
+Target cluster reached.
+Episode 44/100 reward: 4.0, Model Steps 4 
+Episode 45/100 reward: 11.0, Model Steps 11 
+Target cluster reached.
+Episode 46/100 reward: 3.0, Model Steps 3 
+Episode 47/100 reward: 18.0, Model Steps 18 
+Episode 48/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 49/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 50/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 51/100 reward: 3.0, Model Steps 3 
+Target cluster reached.
+Episode 52/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 53/100 reward: 4.0, Model Steps 4 
+Episode 54/100 reward: 14.0, Model Steps 14 
+Episode 55/100 reward: 18.0, Model Steps 18 
+Episode 56/100 reward: 12.0, Model Steps 12 
+Episode 57/100 reward: 29.0, Model Steps 29 
+Episode 58/100 reward: 15.0, Model Steps 15 
+Episode 59/100 reward: 26.0, Model Steps 26 
+Episode 60/100 reward: 12.0, Model Steps 12 
+Episode 61/100 reward: 17.0, Model Steps 17 
+Episode 62/100 reward: 12.0, Model Steps 12 
+Episode 63/100 reward: 15.0, Model Steps 15 
+Episode 64/100 reward: 18.0, Model Steps 18 
+Episode 65/100 reward: 31.0, Model Steps 31 
+Target cluster reached.
+Episode 66/100 reward: 3.0, Model Steps 3 
+Episode 67/100 reward: 17.0, Model Steps 17 
+Target cluster reached.
+Episode 68/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 69/100 reward: 2.0, Model Steps 2 
+Episode 70/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 71/100 reward: 4.0, Model Steps 4 
+Episode 72/100 reward: 15.0, Model Steps 15 
+Episode 73/100 reward: 25.0, Model Steps 25 
+Episode 74/100 reward: 17.0, Model Steps 17 
+Target cluster reached.
+Episode 75/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 76/100 reward: 4.0, Model Steps 4 
+Episode 77/100 reward: 13.0, Model Steps 13 
+Episode 78/100 reward: 13.0, Model Steps 13 
+Episode 79/100 reward: 13.0, Model Steps 13 
+Episode 80/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 81/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 82/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 83/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 84/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 85/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 86/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 87/100 reward: 5.0, Model Steps 5 
+Target cluster reached.
+Episode 88/100 reward: 4.0, Model Steps 4 
+Target cluster reached.
+Episode 89/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 90/100 reward: 4.0, Model Steps 4 
+Episode 91/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 92/100 reward: 2.0, Model Steps 2 
+Episode 93/100 reward: 18.0, Model Steps 18 
+Target cluster reached.
+Episode 94/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 95/100 reward: 5.0, Model Steps 5 
+Episode 96/100 reward: 12.0, Model Steps 12 
+Episode 97/100 reward: 12.0, Model Steps 12 
+Target cluster reached.
+Episode 98/100 reward: 2.0, Model Steps 2 
+Target cluster reached.
+Episode 99/100 reward: 4.0, Model Steps 4 
+# Goal Reached : 50 / 100
+# Crashes  : 0 / 100
+Mean ep. reward: 9.67 +- 7.347170141687824
+Creating Alergia Traces
+Warning: Loaded automaton is not input complete.
+Refinement 35 model size: 116 states
+---------------------------------------------
+Testing sb3/dqn-CartPole-v1,sb3/ppo-CartPole-v1 for c51:
+Tests:  0 0 0
+Tests:  3 1 2
+Tests:  7 3 4
+Tests:  16 10 6
+Tests:  20 12 8
+Tests:  25 15 10
+Tests:  35 23 12
+Tests:  40 26 14
+Tests:  45 29 16
+Tests:  47 29 18
+Tests:  51 31 20
+Tests:  54 32 22
+Tests:  57 33 24
+Tests:  65 39 26
+Tests:  69 41 28
+Tests:  74 44 30
+Tests:  80 48 32
+Tests:  85 51 34
+Tests:  88 52 36
+Tests:  94 56 38
+Tests:  100 60 40
+Tests:  103 61 42
+Tests:  110 66 44
+Tests:  114 68 46
+Tests:  120 72 48
+Tests:  122 72 50
+Tests:  124 72 52
+Tests:  130 76 54
+Tests:  138 82 56
+Tests:  142 84 58
+Tests:  147 87 60
+Tests:  156 94 62
+Tests:  159 95 64
+Tests:  164 98 66
+Tests:  169 101 68
+Tests:  171 101 70
+Tests:  174 102 72
+Tests:  177 103 74
+Tests:  181 105 76
+Tests:  183 105 78
+Tests:  191 111 80
+Tests:  195 113 82
+Tests:  201 117 84
+Tests:  203 117 86
+Tests:  211 123 88
+Tests:  216 126 90
+Tests:  222 130 92
+Tests:  230 136 94
+Tests:  233 137 96
+Tests:  238 140 98
+Tests:  243 143 100
+Tests:  245 143 102
+Tests:  250 146 104
+Tests:  254 148 106
+Tests:  256 148 108
+Tests:  261 151 110
+Tests:  269 157 112
+Tests:  272 158 114
+Tests:  278 162 116
+Tests:  281 163 118
+Tests:  289 169 120
+Tests:  293 171 122
+Tests:  303 179 124
+Tests:  308 182 126
+Tests:  315 187 128
+Tests:  323 193 130
+Tests:  329 197 132
+Tests:  332 198 134
+Tests:  336 200 136
+Tests:  342 204 138
+Tests:  348 208 140
+Tests:  351 209 142
+Tests:  372 228 144
+Tests:  376 230 146
+Tests:  380 232 148
+Tests:  384 234 150
+Tests:  387 235 152
+Tests:  391 237 154
+Tests:  397 241 156
+Tests:  400 242 158
+Tests:  407 247 160
+Tests:  409 247 162
+Tests:  414 250 164
+Tests:  418 252 166
+Tests:  427 259 168
+Tests:  436 266 170
+Tests:  439 267 172
+Tests:  442 268 174
+Tests:  453 277 176
+Tests:  459 281 178
+Tests:  469 289 180
+Tests:  472 290 182
+Tests:  475 291 184
+Tests:  478 292 186
+Tests:  486 298 188
+Tests:  491 301 190
+Tests:  505 313 192
+Tests:  511 317 194
+Tests:  516 320 196
+Tests:  518 320 198
+Tests:  530 330 200
+Tests:  533 331 202
+Tests:  539 335 204
+Tests:  547 341 206
+Tests:  555 347 208
+Tests:  561 351 210
+Tests:  563 351 212
+Tests:  567 353 214
+Tests:  572 356 216
+Tests:  578 360 218
+Tests:  581 361 220
+Tests:  592 370 222
+Tests:  598 374 224
+Tests:  609 383 226
+Tests:  612 384 228
+Tests:  616 386 230
+Tests:  619 387 232
+Tests:  625 391 234
+Tests:  628 392 236
+Tests:  632 394 238
+Tests:  636 396 240
+Tests:  640 398 242
+Tests:  644 400 244
+Tests:  648 402 246
+Tests:  653 405 248
+Tests:  655 405 250
+Tests:  658 406 252
+Tests:  660 406 254
+Tests:  678 422 256
+Tests:  688 430 258
+Tests:  696 436 260
+Tests:  703 441 262
+Tests:  707 443 264
+Tests:  711 445 266
+Tests:  717 449 268
+Tests:  724 454 270
+Tests:  730 458 272
+Tests:  737 463 274
+Tests:  742 466 276
+Tests:  746 468 278
+Tests:  757 477 280
+Tests:  759 477 282
+Tests:  762 478 284
+Tests:  767 481 286
+Tests:  777 489 288
+Tests:  788 498 290
+Tests:  794 502 292
+Tests:  797 503 294
+Tests:  802 506 296
+Tests:  807 509 298
+Tests:  809 509 300
+Tests:  812 510 302
+Tests:  822 518 304
+Tests:  828 522 306
+Tests:  834 526 308
+Tests:  842 532 310
+Tests:  844 532 312
+Tests:  847 533 314
+Tests:  855 539 316
+Tests:  859 541 318
+Tests:  861 541 320
+Tests:  868 546 322
+Tests:  872 548 324
+Tests:  880 554 326
+Tests:  884 556 328
+Tests:  890 560 330
+Tests:  893 561 332
+Tests:  899 565 334
+Tests:  907 571 336
+Tests:  912 574 338
+Tests:  917 577 340
+Tests:  919 577 342
+Tests:  926 582 344
+Tests:  948 602 346
+Tests:  955 607 348
+Tests:  957 607 350
+Tests:  960 608 352
+Tests:  966 612 354
+Tests:  972 616 356
+Tests:  974 616 358
+Tests:  981 621 360
+Tests:  986 624 362
+Tests:  991 627 364
+Tests:  993 627 366
+Tests:  1002 634 368
+Tests:  1008 638 370
+Tests:  1013 641 372
+Tests:  1016 642 374
+Tests:  1018 642 376
+Tests:  1028 650 378
+Tests:  1037 657 380
+Tests:  1044 662 382
+Tests:  1047 663 384
+Tests:  1050 664 386
+Tests:  1059 671 388
+Tests:  1061 671 390
+Tests:  1069 677 392
+Tests:  1079 685 394
+Tests:  1081 685 396
+Tests:  1084 686 398
+Printing experiment results
+Total number of tests    : 1090
+Number of spurious tests : 690
+Percentage valid tests   : 36.7%
+sb3/dqn-CartPole-v1----------------
+Pass : 198
+Fail : 2
+sb3/ppo-CartPole-v1----------------
+Pass : 200
