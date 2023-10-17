@@ -216,6 +216,7 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
 
     total_test_num, spurious_tests_num, num_successful_tests = 0, 0, 0
 
+    agent_time = 0
     while num_successful_tests < num_tests_per_agent:
         print("Tests: ", total_test_num, spurious_tests_num, num_successful_tests)
 
@@ -227,6 +228,7 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
             # retrain the model
             print('Number of spurious test cases passed allowed successful/spurious ration.')
             print('Retrain the model')
+            timing_info["agent"].append(agent_time)
             return False, test_results_per_agent
 
         for agent_name, agent in agents_under_test:
@@ -264,7 +266,10 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
                     reached_cluster = f'c{reached_cluster}'
 
                     if reached_cluster in target_clusters:
+                        agent_suffix_start = time.time()
                         test_result = agent_suffix(agent, env, env_name, observation, ep_steps)
+                        agent_suffix_end = time.time()
+                        agent_time += (agent_suffix_end - agent_suffix_start)
 
                         if env_name == 'LunarLander-v2' or env_name == 'CartPole-v1':
                             test_results_per_agent[agent_name][test_result] += 1
@@ -289,6 +294,7 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
                 if switch_agent:
                     break
 
+    timing_info["agent"].append(agent_time)
     print('Printing experiment results')
     print(f'Total number of tests    : {total_test_num}')
     print(f'Number of spurious tests : {spurious_tests_num}')
@@ -414,6 +420,7 @@ for target in clusters_of_interest:
                 timing_info["testing"].clear()
                 timing_info["mc"].clear()
                 timing_info["refinement"].clear()
+                timing_info["agent"].clear()
 
             output_file.close()
             break
@@ -424,5 +431,6 @@ for target in clusters_of_interest:
                 timing_info["testing"].clear()
                 timing_info["mc"].clear()
                 timing_info["refinement"].clear()
+                timing_info["agent"].clear()
             output_file.close()
             break
