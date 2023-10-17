@@ -1,3 +1,4 @@
+import time
 from collections import defaultdict
 from statistics import mean, stdev
 
@@ -14,7 +15,7 @@ from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, 
 class IterativeRefinement:
     def __init__(self, env, env_name, initial_model, abstract_traces, dim_reduction_pipeline, clustering_fun,
                  scheduler_type='probabilistic', experiment_name_prefix='',
-                 count_observations=False, num_agent_steps=None, agent=None):
+                 count_observations=False, num_agent_steps=None, agent=None, timing_info=None):
         assert scheduler_type in {'probabilistic', 'deterministic'}
         self.env = env
         self.env_name = env_name
@@ -36,8 +37,9 @@ class IterativeRefinement:
 
         self.exp_name = f'{experiment_name_prefix}{dim_reduction_pipeline.pipeline_name}' \
                         f'_n_clusters_{len(set(self.clustering_fun.labels_))}'
+        self.timing_info = timing_info
 
-    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=1.1, ):
+    def iteratively_refine_model(self, num_iterations, episodes_per_iteration, goal_state='succ', early_stopping=1.1):
 
         nums_goal_reached = 0
 
@@ -48,7 +50,12 @@ class IterativeRefinement:
             remove_nan(self.model)
             # Make model input complete
             self.model.make_input_complete('sink_state')
+            start = time.time()
             scheduler = PrismInterface(goal_state, self.model).scheduler
+            end = time.time()
+            if self.timing_info is not None:
+                self.timing_info["mc"].append(end - start)
+
             if scheduler is None and last_scheduler:
                 scheduler = last_scheduler
             elif scheduler is None and not last_scheduler:
@@ -65,9 +72,14 @@ class IterativeRefinement:
             concrete_traces = []
 
             ep_rewards = []
+            start_ref = time.time()
+            step_times = 0
             for episode_index in range(episodes_per_iteration):
                 scheduler.reset()
+                start_rest = time.time()
                 obs = self.env.reset()
+                end_reset = time.time()
+                step_times += (end_reset - start_rest)
                 ep_rew = 0
 
                 if self.num_agent_steps:
@@ -88,10 +100,12 @@ class IterativeRefinement:
                     if scheduler_input is None:
                         print('Could not schedule an action.')
                         break
-
                     action = np.array(int(scheduler_input[1:]))
                     num_steps_model += 1
+                    start_step = time.time()
                     observation, reward, done, _ = self.env.step(action)
+                    end_step = time.time()
+                    step_times += (end_step - start_step)
                     # self.env.render()
 
                     # add cutoff for Cartpole
@@ -105,7 +119,11 @@ class IterativeRefinement:
                         abstract_obs = self.dim_reduction_pipeline.transform(np.array([observation]))
                     else:
                         abstract_obs = [observation.reshape(1, -1)]
-
+                    # print(f"NUM: {num_steps_model}")
+                    # print(observation)
+                    # print(abstract_obs)
+                    # dists = self.clustering_fun.transform(abstract_obs)
+                    # print(sorted(enumerate(dists.tolist()[0]), key=lambda ed : ed[1])[:10])
                     reached_cluster = self.clustering_fun.predict(abstract_obs)[0]
                     reached_cluster = f'c{reached_cluster}'
 
@@ -144,6 +162,7 @@ class IterativeRefinement:
                         break
 
                     if done:
+                        dists = self.clustering_fun.transform(abstract_obs)
                         if self.env_name == 'LunarLander-v2':
                             if reward >= 80:
                                 add_info += 'Successfully landed'
@@ -163,6 +182,11 @@ class IterativeRefinement:
                     f'Episode {episode_index}/{episodes_per_iteration} reward: {ep_rew}, Model Steps {num_steps_model} {add_info}')
                 concrete_traces.append(ep_data)
 
+            end_ref = time.time()
+            if self.timing_info is not None:
+                self.timing_info["refinement"].append(end_ref - start_ref)
+                self.timing_info["environment"].append(step_times)
+
             nums_goal_reached += num_goal_reached_iteration
             print(f'# Goal Reached : {num_goal_reached_iteration} / {episodes_per_iteration}')
             print(f'# Crashes  : {num_crashes_per_iteration} / {episodes_per_iteration}')
@@ -172,6 +196,7 @@ class IterativeRefinement:
                 print(f"Stopping iteration loop as early stopping criterion (>= {early_stopping}) is met.")
                 return
 
+            start_learning = time.time()
             # refine model
             observation_space, action_space = get_observations_and_actions(concrete_traces)
             if self.dim_reduction_pipeline is not None:
@@ -185,7 +210,8 @@ class IterativeRefinement:
             self.abstract_traces.extend(iteration_abstract_traces)
             self.model = run_JAlergia(self.abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
                                       heap_memory='-Xmx12G')
-
+            end_learning = time.time()
+            self.timing_info["learning"].append(end_learning-start_learning)
             print(f'Refinement {self.current_iteration + 1} model size: {self.model.size} states')
 
             # save results

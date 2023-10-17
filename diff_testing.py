@@ -14,6 +14,7 @@ from stable_baselines3 import DQN, A2C, PPO
 from stable_baselines3.common.utils import obs_as_tensor
 from tqdm import tqdm
 
+import time
 from agents import load_agent
 from discretization_pipeline import get_observations_and_actions
 from iterative_refinement import IterativeRefinement
@@ -21,9 +22,11 @@ from schedulers import PrismInterface, ProbabilisticScheduler, compute_weighted_
 from trace_abstraction import create_abstract_traces
 from utils import load, mdp_from_state_setup, remove_nan, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, CARTPOLE_CUTOFF
 
-aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
-
+# aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 # aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
+# aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+
+aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -37,7 +40,7 @@ def get_cluster_frequency(abstract_traces):
     return cluster_counter
 
 
-def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num_episodes=1000):
+def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num_episodes=1000, importance_def = 0):
     randomness_probabilities = (0, 0.05, 0.1, 0.15, 0.2)
     print('Executing agent policy and assigning importance to each cluster.')
     rand_i = 0
@@ -59,7 +62,7 @@ def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num
 
             with torch.no_grad():
                 q_values = dqn_agent.q_net(obs_as_tensor(observation.reshape(1, -1), device=device))
-                q_values = q_values.detach().numpy().tolist()[0]
+                q_values = q_values.detach().cpu().numpy().tolist()[0]
                 importance = max(q_values) - min(q_values)
                 importance_list.append(importance)
 
@@ -91,12 +94,12 @@ def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num
             visited_cluster_index += 1
 
     for k, v in cluster_importance_map.items():
-        cluster_importance_map[k] = mean(v), min(v), max(v)
-    sorted_dict = dict(sorted(cluster_importance_map.items(), key=lambda x: x[1][0], reverse=True))
+        cluster_importance_map[k] = mean(v), min(v), max(v),mean(v)*len(v)
+    sorted_dict = dict(sorted(cluster_importance_map.items(), key=lambda x: x[1][importance_def], reverse=True))
 
     clusters_with_biggest_mean_importance = []
     for k, v in sorted_dict.items():
-        if 'close' not in k and 'succ' not in 'k':
+        if 'close' not in k and 'succ' not in k:
             clusters_with_biggest_mean_importance.append(k)
 
         if len(clusters_with_biggest_mean_importance) == 10:
@@ -164,14 +167,14 @@ def stop_based_on_statistics(results_dict, env_name):
     elif env_name == 'Acrobot-v1' or env_name == 'MountainCar-v0':
         agent_1_num_steps = results_dict[agent_1]
         agent_2_num_steps = results_dict[agent_2]
-
-        _, p = mannwhitneyu(agent_1_num_steps, agent_2_num_steps)
-        if p > 0.05:
-            print("Stopping early due to significant differance.")
-            print(f'{agent_1} vs {agent_2}')
-            print(f'p value: {p}')
-            return False
-        return True
+        if len(agent_1_num_steps) > 0 and len(agent_2_num_steps) > 0:
+            _, p = mannwhitneyu(agent_1_num_steps, agent_2_num_steps)
+            if p < 0.05:
+                print("Stopping early due to significant differance.")
+                print(f'{agent_1} vs {agent_2}')
+                print(f'p value: {p}')
+                return True
+        return False
 
     elif env_name == 'CartPole-v1':
         f1 = results_dict[agent_1]['Fail']
@@ -191,7 +194,7 @@ def stop_based_on_statistics(results_dict, env_name):
 
 
 def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline, clustering_fun,
-                target_clusters, num_tests_per_agent=100, allowed_spurious_ration=0.9, verbose=True):
+                target_clusters, num_tests_per_agent=100, allowed_spurious_ration=0.95, verbose=True):
     assert len(agents_under_test) == 2
 
     if env_name == 'LunarLander-v2' or env_name == 'CartPole-v1':
@@ -266,7 +269,7 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
                         if env_name == 'LunarLander-v2' or env_name == 'CartPole-v1':
                             test_results_per_agent[agent_name][test_result] += 1
                         else:
-                            agents_under_test[agent_name].append(test_result)
+                            test_results_per_agent[agent_name].append(test_result + ep_steps)
 
                         num_successful_tests += 1
                         switch_agent = True
@@ -303,8 +306,11 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
 
 
 # Load data from experiment run
-experiment_data_path = 'pickles/results/lda_mexp3_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
-# experiment_data_path = 'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk'
+# experiment_data_path = 'pickles/results/lda_mexp1_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
+experiment_data_path = 'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk'
+# experiment_data_path = 'pickles/results/mc_64_exp_0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_64_ri_25_ep_50.pk'
+# experiment_data_path = 'pickles/results/A_exp0_Acrobot-v1_num_traces_2500_manualMapper_n_clusters_256_ri_25_ep_50.pk'
+# experiment_data_path = 'pickles/results/ac_alt_lda_exp_0_Acrobot-v1_num_traces_2500_lda_alt3_powerTransformer_lda_alt_n_clusters_512_ri_25_ep_50.pk'
 
 experiment_data = load(experiment_data_path)
 
@@ -319,48 +325,69 @@ cluster_counter = get_cluster_frequency(abstract_traces)
 cluster_smallest_frequency = [x[0] for x in cluster_counter.most_common() if 'succ' not in x[0]]
 cluster_smallest_frequency.reverse()
 
-clusters_of_interest = cluster_smallest_frequency[0:20]
+clusters_of_interest = cluster_smallest_frequency[:10]
 
-env_name = 'LunarLander-v2'
+env_name = 'CartPole-v1'
 env = gym.make(env_name, )
 
+timing_info = defaultdict(list)
 ir = IterativeRefinement(env=env, env_name=env_name, abstract_traces=abstract_traces,
                          initial_model=model,
                          dim_reduction_pipeline=dim_red_pipeline,
                          clustering_fun=clustering_fun,
-                         experiment_name_prefix='test_diff')
+                         experiment_name_prefix='test_diff',timing_info=timing_info)
 
 ir.current_iteration = last_iter_index + 1
 ir.results = experiment_data
-
 # model = ir.model
 
 agents_under_test = []
 if "Lunar" in experiment_data_path:
     agents_under_test.extend([
+        # these two have similar performance
         ('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
                                                   'dqn-LunarLander-v2.zip', DQN)),
+        ('araffin/ppo-LunarLander-v2', load_agent('araffin/ppo-LunarLander-v2',
+                                                  'ppo-LunarLander-v2.zip', PPO)),
         # ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
         #                                           'a2c-LunarLander-v2.zip', A2C)),
         # ('sb3/dqn-LunarLander-v2', load_agent('sb3/dqn-LunarLander-v2',
         #                                       'dqn-LunarLander-v2.zip', DQN)),
-        ('sb3/a2c-LunarLander-v2', load_agent('sb3/a2c-LunarLander-v2',
-                                              'a2c-LunarLander-v2.zip', A2C)),
+        # ('sb3/a2c-LunarLander-v2', load_agent('sb3/a2c-LunarLander-v2',
+        #                                       'a2c-LunarLander-v2.zip', A2C)),
         # ('sb3/ppo-LunarLander-v2', load_agent('sb3/ppo-LunarLander-v2',
         #                                       'ppo-LunarLander-v2.zip', PPO)),
     ])
 if "CartPole" in experiment_data_path:
     agents_under_test.extend([
+        ('sb3/dqn-CartPole-v1', load_agent('sb3/dqn-CartPole-v1',
+                                           'dqn-CartPole-v1.zip', DQN)),
         ('sb3/ppo-CartPole-v1', load_agent('sb3/ppo-CartPole-v1',
                                            'ppo-CartPole-v1.zip', PPO)),
-        ('sb3/a2c-CartPole-v1', load_agent('sb3/a2c-CartPole-v1',
-                                           'a2c-CartPole-v1.zip', A2C)),
+    ])
+if "MountainCar" in experiment_data_path:
+    agents_under_test.extend([
+    ('sb3/dqn-MountainCar-v0', load_agent('sb3/dqn-MountainCar-v0',
+                                          'dqn-MountainCar-v0.zip', DQN)),
+    ('sb3/ppo-MountainCar-v0', load_agent('sb3/ppo-MountainCar-v0',
+                                          'ppo-MountainCar-v0.zip', PPO)),
+    ])
+if "Acrobot" in experiment_data_path:
+    agents_under_test.extend([
+    ('sb3/dqn-Acrobot-v1', load_agent('sb3/dqn-Acrobot-v1',
+                                          'dqn-Acrobot-v1.zip', DQN)),
+    ('sb3/ppo-Acrobot-v1', load_agent('sb3/ppo-Acrobot-v1',
+                                          'ppo-Acrobot-v1.zip', PPO)),
     ])
 
-clusters_of_interest = get_cluster_importance(agents_under_test[0][1], dim_red_pipeline, clustering_fun)
 
-max_refinements = 10
-num_learning_rounds, ep_per_round = 2, 50
+start = time.time()
+clusters_of_interest = get_cluster_importance(agents_under_test[0][1], dim_red_pipeline, clustering_fun, importance_def=3)
+end = time.time()
+timing_info["cluster_importance"].append(end-start)
+
+max_refinements = 20
+num_learning_rounds, ep_per_round = 2, 100
 for target in clusters_of_interest:
 
     output_file = open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}.txt', 'a')
@@ -373,16 +400,29 @@ for target in clusters_of_interest:
         refinements += num_learning_rounds
         model = ir.model
         print(f'Testing {",".join([x[0] for x in agents_under_test])} for {target}:')
+        test_start = time.time()
         successfully_stopped, results = test_agents(env, env_name, model, agents_under_test, dim_red_pipeline,
                                                     clustering_fun, [target],
-                                                    num_tests_per_agent=200)
-
+                                                    num_tests_per_agent=400)
+        test_end = time.time()
+        timing_info["testing"].append(test_end-test_start)
         if successfully_stopped:
             with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}.pickle', 'wb') as handle:
                 pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}_time.pickle', 'wb') as handle:
+                pickle.dump(timing_info, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                timing_info["testing"].clear()
+                timing_info["mc"].clear()
+                timing_info["refinement"].clear()
+
             output_file.close()
             break
         elif refinements >= max_refinements:
             print(f"Aborting {target} after {refinements} refinements")
+            with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}_time.pickle', 'wb') as handle:
+                pickle.dump(timing_info, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                timing_info["testing"].clear()
+                timing_info["mc"].clear()
+                timing_info["refinement"].clear()
             output_file.close()
             break
