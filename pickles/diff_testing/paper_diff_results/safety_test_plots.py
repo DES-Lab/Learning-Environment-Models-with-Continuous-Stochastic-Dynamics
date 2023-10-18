@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter, defaultdict
 
-exp_short = "CP"
+exp_short = "LL"
 if exp_short == "LL":
     pass_string = "Landed"
     fail_string = "Crash"
@@ -75,7 +75,10 @@ for cluster in cluster_names:
                 inconclusive_clusters[cluster] = False
             inconc_added = True
         normalized_pass = result_counter[pass_string]/nr_tests
-        normalized_fail = result_counter[fail_string]/nr_tests
+        normalized_fail = result_counter[fail_string]
+        if exp_short == "LL":
+            normalized_fail += result_counter["Time_out"]
+        normalized_fail = normalized_fail / nr_tests
         normalized_results[policy_name].append(normalized_fail)
         
 
@@ -118,7 +121,7 @@ ax.set_title('Differential Safety Test Results')
 x = np.arange(len(cluster_names))
 ax.set_xticks(x + width, cluster_names)
 ax.legend(loc='upper left', ncols=3)
-ylim = 0.16 if exp_short == "LL" else 1.15
+ylim = 0.56 if exp_short == "LL" else 1.15
 ax.set_ylim(0, ylim)
 #plt.show()
 plt.savefig(f'diff_testing_{exp_name}.png')
