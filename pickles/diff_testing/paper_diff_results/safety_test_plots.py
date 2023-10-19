@@ -5,6 +5,7 @@ import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import Counter, defaultdict
+import tikzplotlib
 
 exp_short = "LL"
 if exp_short == "LL":
@@ -82,7 +83,7 @@ for cluster in cluster_names:
         normalized_results[policy_name].append(normalized_fail)
         
 
-width = 0.25  # the width of the bars
+width = 0.4  # the width of the bars
 multiplier = 0
 
 fig, ax = plt.subplots(layout='constrained')        
@@ -98,9 +99,9 @@ colors = ["#fc0303","#0303fc"]
 for policy, measurement in normalized_results.items():
     offset = width * multiplier
     y = np.array([measurement[i] for i,c in enumerate(cluster_names) if not inconclusive_clusters[c]])
-    rects = ax.bar(x + offset, y, width, color = colors[multiplier], label=policy)
+    rects = ax.bar(x + offset + width/2, y, width, color = colors[multiplier], label=policy)
     print(rects)
-    ax.bar_label(rects, padding=3,fmt='%1.3f',rotation='vertical')
+    #ax.bar_label(rects, padding=3,fmt='%1.3f',rotation='vertical')
     multiplier += 1
 
 x = np.array([i for i,c in enumerate(cluster_names) if inconclusive_clusters[c]])
@@ -109,9 +110,9 @@ multiplier = 0
 for policy, measurement in normalized_results.items():
     offset = (width * multiplier)
     y = np.array([measurement[i] for i,c in enumerate(cluster_names) if inconclusive_clusters[c]])
-    rects = ax.bar(x + offset, y, width,color = colors[multiplier],alpha=0.3)
+    rects = ax.bar(x + offset + width/2, y, width,color = colors[multiplier],alpha=0.3)
     print(rects)
-    ax.bar_label(rects, padding=3,fmt='%1.3f',rotation='vertical')
+    #ax.bar_label(rects, padding=3,fmt='%1.3f',rotation='vertical')
     multiplier += 1
 
     
@@ -124,7 +125,7 @@ ax.legend(loc='upper left', ncols=3)
 ylim = 0.56 if exp_short == "LL" else 1.15
 ax.set_ylim(0, ylim)
 #plt.show()
-plt.savefig(f'diff_testing_{exp_name}.png')
-
+#plt.savefig(f'diff_testing_{exp_name}.png')
+tikzplotlib.save(f'diff_testing_{exp_name}.tex')
 
     

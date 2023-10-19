@@ -312,8 +312,8 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
 
 
 # Load data from experiment run
-# experiment_data_path = 'pickles/results/lda_mexp1_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
-experiment_data_path = 'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk'
+experiment_data_path = 'pickles/results/lda_mexp1_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
+# experiment_data_path = 'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk'
 # experiment_data_path = 'pickles/results/mc_64_exp_0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_64_ri_25_ep_50.pk'
 # experiment_data_path = 'pickles/results/A_exp0_Acrobot-v1_num_traces_2500_manualMapper_n_clusters_256_ri_25_ep_50.pk'
 # experiment_data_path = 'pickles/results/ac_alt_lda_exp_0_Acrobot-v1_num_traces_2500_lda_alt3_powerTransformer_lda_alt_n_clusters_512_ri_25_ep_50.pk'
@@ -333,7 +333,7 @@ cluster_smallest_frequency.reverse()
 
 clusters_of_interest = cluster_smallest_frequency[:10]
 
-env_name = 'CartPole-v1'
+env_name = 'LunarLander-v2'
 env = gym.make(env_name, )
 
 timing_info = defaultdict(list)
