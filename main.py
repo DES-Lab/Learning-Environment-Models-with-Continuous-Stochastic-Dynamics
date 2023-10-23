@@ -17,6 +17,7 @@ from utils import get_traces_from_policy
 seed(101)
 
 # define a path to prism
+# TODO replace path to prism
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
 # Choose the enviroment: one of {'Acrobot-v1','LunarLander-v2','MountainCar-v0','CartPole-v1'}

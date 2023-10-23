@@ -17,6 +17,7 @@ To install requirements:
 pip install -r requirements.txt
 ```
 
+## Learning Environment Models with Continuous Stochastic Dynamics
 To reproduce an experiment, simply call `experiment_cmd_runner.py` with appropriate arguments, as shown in the following line:
 ```
 python experiment_cmd_runner.py --path_to_prism "C:/Program Files/prism-4.7/bin/prism.bat" --path_to_alergia alergia.jar --env_name Acrobot --dim_reduction manual --num_initial_traces 2500 --num_clusters 256 --num_iterations 10 --episodes_in_iter 10 --exp_prefix exp_1_ --seed 101
@@ -25,4 +26,16 @@ Alternatively, you can change variable values in `main.py` and execute any exper
 
 To set a constant random seed for reproducibility, simply define an --seed argument or set the seed in the 'main.py' file.
 
-To visualize the results, parameterize and use visualization_util.py.
+To visualize the plots found in the paper, run `visualization_util.py`. Visualization_util can also be used to visualize new runs.
+
+## Differential Testing
+All code required to differentially test 2 agents with CASTLE is found in `diff_testing.py`.
+When running the script, please replace `path_to_prism` in line 26 with appropriate install path.
+
+To run differential testing with learned models (and during differential testing fined tuned), simply run
+`diff_testing.py`. To switch between LunarLander and Cartpole experiments, change the value of experiment variable in line 313.
+
+For each cluster of interest, results of differential testing will be saved to a pickle and .txt file found in
+`pickles/diff_testing/` folder.
+
+Differential testing plots found in the paper can be visualized with `pickles/diff_testing/paper_diff_results/saftey_test_plots.py`.

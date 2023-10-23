@@ -22,11 +22,9 @@ from schedulers import PrismInterface, ProbabilisticScheduler, compute_weighted_
 from trace_abstraction import create_abstract_traces
 from utils import load, mdp_from_state_setup, remove_nan, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, CARTPOLE_CUTOFF
 
-# aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
-# aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
-# aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
+# TODO replace path to prism
+aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
 
-aalpy.paths.path_to_prism = "/home/mtappler/Programs/prism-4.8-linux64-x86/bin/prism"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
@@ -40,7 +38,7 @@ def get_cluster_frequency(abstract_traces):
     return cluster_counter
 
 
-def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num_episodes=1000, importance_def = 0):
+def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num_episodes=1000, importance_def=0):
     randomness_probabilities = (0, 0.05, 0.1, 0.15, 0.2)
     print('Executing agent policy and assigning importance to each cluster.')
     rand_i = 0
@@ -94,7 +92,7 @@ def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num
             visited_cluster_index += 1
 
     for k, v in cluster_importance_map.items():
-        cluster_importance_map[k] = mean(v), min(v), max(v),mean(v)*len(v)
+        cluster_importance_map[k] = mean(v), min(v), max(v), mean(v) * len(v)
     sorted_dict = dict(sorted(cluster_importance_map.items(), key=lambda x: x[1][importance_def], reverse=True))
 
     clusters_with_biggest_mean_importance = []
@@ -311,126 +309,119 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
     return True, test_results_per_agent
 
 
-# Load data from experiment run
-# experiment_data_path = 'pickles/results/lda_mexp1_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk'
-experiment_data_path = 'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk'
-# experiment_data_path = 'pickles/results/mc_64_exp_0_MountainCar-v0_num_traces_2500_powerTransformer_n_clusters_64_ri_25_ep_50.pk'
-# experiment_data_path = 'pickles/results/A_exp0_Acrobot-v1_num_traces_2500_manualMapper_n_clusters_256_ri_25_ep_50.pk'
-# experiment_data_path = 'pickles/results/ac_alt_lda_exp_0_Acrobot-v1_num_traces_2500_lda_alt3_powerTransformer_lda_alt_n_clusters_512_ri_25_ep_50.pk'
+if __name__ == '__main__':
+    experiment = 'LunarLander'
+    assert experiment in 'LunarLander, Cartpole'
 
-experiment_data = load(experiment_data_path)
+    exp_data = {'LunarLander': (
+    'pickles/results/lda_mexp1_LunarLander-v2_num_traces_2500_lda_powerTransformer_n_clusters_1024_ri_25_ep_50.pk',
+    'LunarLander-v2'),
+                'Cartpole': (
+                'pickles/results/cp_64_4_CartPole-v1_num_traces_2500_powerTransformer_n_clusters_64_ri_15_ep_50.pk',
+                'CartPole-v1')}
 
-last_iter_index = max(list(experiment_data.keys()))
-abstract_traces = experiment_data[0]['learning_data']
-model = mdp_from_state_setup(experiment_data[last_iter_index]['model'])
-dim_red_pipeline = experiment_data[0]['dim_red_pipeline']
-clustering_fun = experiment_data[0]['clustering_function']
+    experiment_data_path, env_name = exp_data[experiment]
 
-cluster_counter = get_cluster_frequency(abstract_traces)
+    experiment_data = load(experiment_data_path)
 
-cluster_smallest_frequency = [x[0] for x in cluster_counter.most_common() if 'succ' not in x[0]]
-cluster_smallest_frequency.reverse()
+    # load model used to solve a RL task and its data
+    last_iter_index = max(list(experiment_data.keys()))
+    abstract_traces = experiment_data[0]['learning_data']
+    model = mdp_from_state_setup(experiment_data[last_iter_index]['model'])
+    dim_red_pipeline = experiment_data[0]['dim_red_pipeline']
+    clustering_fun = experiment_data[0]['clustering_function']
 
-clusters_of_interest = cluster_smallest_frequency[:10]
+    # count seen clusters during model training
+    cluster_counter = get_cluster_frequency(abstract_traces)
 
-env_name = 'CartPole-v1'
-env = gym.make(env_name, )
+    cluster_smallest_frequency = [x[0] for x in cluster_counter.most_common() if 'succ' not in x[0]]
+    cluster_smallest_frequency.reverse()
 
-timing_info = defaultdict(list)
-ir = IterativeRefinement(env=env, env_name=env_name, abstract_traces=abstract_traces,
-                         initial_model=model,
-                         dim_reduction_pipeline=dim_red_pipeline,
-                         clustering_fun=clustering_fun,
-                         experiment_name_prefix='test_diff',timing_info=timing_info)
+    clusters_of_interest = cluster_smallest_frequency[:10]
 
-ir.current_iteration = last_iter_index + 1
-ir.results = experiment_data
-# model = ir.model
+    env = gym.make(env_name, )
 
-agents_under_test = []
-if "Lunar" in experiment_data_path:
-    agents_under_test.extend([
-        # these two have similar performance
-        ('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
-                                                  'dqn-LunarLander-v2.zip', DQN)),
-        ('araffin/ppo-LunarLander-v2', load_agent('araffin/ppo-LunarLander-v2',
-                                                  'ppo-LunarLander-v2.zip', PPO)),
-        # ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
-        #                                           'a2c-LunarLander-v2.zip', A2C)),
-        # ('sb3/dqn-LunarLander-v2', load_agent('sb3/dqn-LunarLander-v2',
-        #                                       'dqn-LunarLander-v2.zip', DQN)),
-        # ('sb3/a2c-LunarLander-v2', load_agent('sb3/a2c-LunarLander-v2',
-        #                                       'a2c-LunarLander-v2.zip', A2C)),
-        # ('sb3/ppo-LunarLander-v2', load_agent('sb3/ppo-LunarLander-v2',
-        #                                       'ppo-LunarLander-v2.zip', PPO)),
-    ])
-if "CartPole" in experiment_data_path:
-    agents_under_test.extend([
-        ('sb3/dqn-CartPole-v1', load_agent('sb3/dqn-CartPole-v1',
-                                           'dqn-CartPole-v1.zip', DQN)),
-        ('sb3/ppo-CartPole-v1', load_agent('sb3/ppo-CartPole-v1',
-                                           'ppo-CartPole-v1.zip', PPO)),
-    ])
-if "MountainCar" in experiment_data_path:
-    agents_under_test.extend([
-    ('sb3/dqn-MountainCar-v0', load_agent('sb3/dqn-MountainCar-v0',
-                                          'dqn-MountainCar-v0.zip', DQN)),
-    ('sb3/ppo-MountainCar-v0', load_agent('sb3/ppo-MountainCar-v0',
-                                          'ppo-MountainCar-v0.zip', PPO)),
-    ])
-if "Acrobot" in experiment_data_path:
-    agents_under_test.extend([
-    ('sb3/dqn-Acrobot-v1', load_agent('sb3/dqn-Acrobot-v1',
-                                          'dqn-Acrobot-v1.zip', DQN)),
-    ('sb3/ppo-Acrobot-v1', load_agent('sb3/ppo-Acrobot-v1',
-                                          'ppo-Acrobot-v1.zip', PPO)),
-    ])
+    timing_info = defaultdict(list)
+    ir = IterativeRefinement(env=env, env_name=env_name, abstract_traces=abstract_traces,
+                             initial_model=model,
+                             dim_reduction_pipeline=dim_red_pipeline,
+                             clustering_fun=clustering_fun,
+                             experiment_name_prefix='test_diff', timing_info=timing_info)
 
+    ir.current_iteration = last_iter_index + 1
+    ir.results = experiment_data
+    # model = ir.model
 
-start = time.time()
-clusters_of_interest = get_cluster_importance(agents_under_test[0][1], dim_red_pipeline, clustering_fun, importance_def=3)
-end = time.time()
-timing_info["cluster_importance"].append(end-start)
+    agents_under_test = []
+    if "Lunar" in experiment_data_path:
+        agents_under_test.extend([
+            # these two have similar performance
+            ('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
+                                                      'dqn-LunarLander-v2.zip', DQN)),
+            ('araffin/ppo-LunarLander-v2', load_agent('araffin/ppo-LunarLander-v2',
+                                                      'ppo-LunarLander-v2.zip', PPO)),
+            # ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
+            #                                           'a2c-LunarLander-v2.zip', A2C)),
+            # ('sb3/dqn-LunarLander-v2', load_agent('sb3/dqn-LunarLander-v2',
+            #                                       'dqn-LunarLander-v2.zip', DQN)),
+            # ('sb3/a2c-LunarLander-v2', load_agent('sb3/a2c-LunarLander-v2',
+            #                                       'a2c-LunarLander-v2.zip', A2C)),
+            # ('sb3/ppo-LunarLander-v2', load_agent('sb3/ppo-LunarLander-v2',
+            #                                       'ppo-LunarLander-v2.zip', PPO)),
+        ])
+    if "CartPole" in experiment_data_path:
+        agents_under_test.extend([
+            ('sb3/dqn-CartPole-v1', load_agent('sb3/dqn-CartPole-v1',
+                                               'dqn-CartPole-v1.zip', DQN)),
+            ('sb3/ppo-CartPole-v1', load_agent('sb3/ppo-CartPole-v1',
+                                               'ppo-CartPole-v1.zip', PPO)),
+        ])
 
-max_refinements = 20
-num_learning_rounds, ep_per_round = 2, 100
-for target in clusters_of_interest:
+    start = time.time()
+    clusters_of_interest = get_cluster_importance(agents_under_test[0][1], dim_red_pipeline, clustering_fun,
+                                                  importance_def=3)
+    end = time.time()
+    timing_info["cluster_importance"].append(end - start)
 
-    output_file = open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}.txt', 'a')
-    sys.stdout = output_file
+    max_refinements = 20
+    num_learning_rounds, ep_per_round = 2, 100
+    for target in clusters_of_interest:
 
-    refinements = 0
-    while True:
-        print(f'Retraining the model for {num_learning_rounds} learning rounds with {ep_per_round} episodes.')
-        ir.iteratively_refine_model(num_learning_rounds, ep_per_round, goal_state=[target])
-        refinements += num_learning_rounds
-        model = ir.model
-        print(f'Testing {",".join([x[0] for x in agents_under_test])} for {target}:')
-        test_start = time.time()
-        successfully_stopped, results = test_agents(env, env_name, model, agents_under_test, dim_red_pipeline,
-                                                    clustering_fun, [target],
-                                                    num_tests_per_agent=400)
-        test_end = time.time()
-        timing_info["testing"].append(test_end-test_start)
-        if successfully_stopped:
-            with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}.pickle', 'wb') as handle:
-                pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}_time.pickle', 'wb') as handle:
-                pickle.dump(timing_info, handle, protocol=pickle.HIGHEST_PROTOCOL)
-                timing_info["testing"].clear()
-                timing_info["mc"].clear()
-                timing_info["refinement"].clear()
-                timing_info["agent"].clear()
+        output_file = open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}.txt', 'a')
+        sys.stdout = output_file
 
-            output_file.close()
-            break
-        elif refinements >= max_refinements:
-            print(f"Aborting {target} after {refinements} refinements")
-            with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}_time.pickle', 'wb') as handle:
-                pickle.dump(timing_info, handle, protocol=pickle.HIGHEST_PROTOCOL)
-                timing_info["testing"].clear()
-                timing_info["mc"].clear()
-                timing_info["refinement"].clear()
-                timing_info["agent"].clear()
-            output_file.close()
-            break
+        refinements = 0
+        while True:
+            print(f'Retraining the model for {num_learning_rounds} learning rounds with {ep_per_round} episodes.')
+            ir.iteratively_refine_model(num_learning_rounds, ep_per_round, goal_state=[target])
+            refinements += num_learning_rounds
+            model = ir.model
+            print(f'Testing {",".join([x[0] for x in agents_under_test])} for {target}:')
+            test_start = time.time()
+            successfully_stopped, results = test_agents(env, env_name, model, agents_under_test, dim_red_pipeline,
+                                                        clustering_fun, [target],
+                                                        num_tests_per_agent=400)
+            test_end = time.time()
+            timing_info["testing"].append(test_end - test_start)
+            if successfully_stopped:
+                with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}.pickle', 'wb') as handle:
+                    pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}_time.pickle', 'wb') as handle:
+                    pickle.dump(timing_info, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                    timing_info["testing"].clear()
+                    timing_info["mc"].clear()
+                    timing_info["refinement"].clear()
+                    timing_info["agent"].clear()
+
+                output_file.close()
+                break
+            elif refinements >= max_refinements:
+                print(f"Aborting {target} after {refinements} refinements")
+                with open(f'pickles/diff_testing/diff_test_{env_name}_cluster_{target}_time.pickle', 'wb') as handle:
+                    pickle.dump(timing_info, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                    timing_info["testing"].clear()
+                    timing_info["mc"].clear()
+                    timing_info["refinement"].clear()
+                    timing_info["agent"].clear()
+                output_file.close()
+                break

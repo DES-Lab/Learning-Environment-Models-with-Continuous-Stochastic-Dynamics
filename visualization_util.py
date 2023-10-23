@@ -238,7 +238,8 @@ if __name__ == '__main__':
 
     baseline_values = {'MountainCar': -130, 'Acrobot': - 100, 'Cartpole': 200, 'LunarLander': 250}
 
-    experiment = 'MountainCar'
+    #experiments = ['MountainCar']
+    experiments = ['LunarLander', 'Acrobot', 'MountainCar', 'Cartpole']
     avg_method = 'mean_stddev'  # 'median_quantiles'
 
     # all_experiments = [load(l) for l in mountain_car_128]
@@ -249,20 +250,21 @@ if __name__ == '__main__':
     # visualize_multiple_experiments2([('CP 128', load_all(cartpole_128_clusters)), ('64', load_all(cartpole_64_clusters)), ('CP 32',load_all(cartpole_32_clusters))], 'Cartpole', avg_method, 200)
     # exit()
 
-    if experiment == 'LunarLander':
-        visualize_multiple_experiments(('Manual Mapper', load_all(lunar_lander_manual)),
-                                       ('LDA', load_all(lunar_lander_lda)),
-                                       env_name='Lunar Lander', method=avg_method,
-                                       baseline_val=baseline_values[experiment])
-    if experiment == 'Acrobot':
-        visualize_multiple_experiments(('Manual Mapper', load_all(acrobot_file_manual)),
-                                       ('LDA', load_all(acrobot_file_lda)),
-                                       env_name='Acrobot', method=avg_method, baseline_val=baseline_values[experiment])
-    if experiment == 'MountainCar':
-        visualize_multiple_experiments2([('k=256', load_all(mountain_car_256)),
-                                         ('k=128', load_all(mountain_car_128)),
-                                         ('k=64',load_all(mountain_car_64))], 'Mountain Car', avg_method, -130)
-    if experiment == 'Cartpole':
-        visualize_multiple_experiments2([('k=128', load_all(cartpole_128_clusters)),
-                                         ('k=64', load_all(cartpole_64_clusters)),
-                                         ('k=32',load_all(cartpole_32_clusters))], 'Cartpole', avg_method, 200)
+    for experiment in experiments:
+        if experiment == 'LunarLander':
+            visualize_multiple_experiments(('Manual Mapper', load_all(lunar_lander_manual)),
+                                           ('LDA', load_all(lunar_lander_lda)),
+                                           env_name='Lunar Lander', method=avg_method,
+                                           baseline_val=baseline_values[experiment])
+        if experiment == 'Acrobot':
+            visualize_multiple_experiments(('Manual Mapper', load_all(acrobot_file_manual)),
+                                           ('LDA', load_all(acrobot_file_lda)),
+                                           env_name='Acrobot', method=avg_method, baseline_val=baseline_values[experiment])
+        if experiment == 'MountainCar':
+            visualize_multiple_experiments2([('k=256', load_all(mountain_car_256)),
+                                             ('k=128', load_all(mountain_car_128)),
+                                             ('k=64',load_all(mountain_car_64))], 'Mountain Car', avg_method, -130)
+        if experiment == 'Cartpole':
+            visualize_multiple_experiments2([('k=128', load_all(cartpole_128_clusters)),
+                                             ('k=64', load_all(cartpole_64_clusters)),
+                                             ('k=32',load_all(cartpole_32_clusters))], 'Cartpole', avg_method, 200)
