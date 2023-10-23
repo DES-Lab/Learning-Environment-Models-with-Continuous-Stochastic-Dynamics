@@ -7,7 +7,6 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.cluster import KMeans
 from sklearn.pipeline import Pipeline
 
-from autoencoder import AE
 from utils import load, save
 
 
@@ -79,20 +78,6 @@ class PipelineWrapper(Pipeline):
         if not self.steps:
             return X
         return super(PipelineWrapper, self).transform(X)
-
-
-class AutoencoderDimReduction(BaseEstimator, TransformerMixin):
-    def __init__(self, latent_dim, num_training_epochs):
-        super().__init__()
-        self.latent_dim = latent_dim
-        self.num_training_epochs = num_training_epochs
-        self.ae = AE(latent_dim)
-
-    def fit(self, X, y=None):
-        self.ae.train_autoencoder(X, epochs=self.num_training_epochs, batch_size=64)
-
-    def transform(self, X, y=None):
-        return np.array([self.ae.encoder(torch.tensor(obs)).detach().numpy().tolist() for obs in X])
 
 
 class LunarLanderManualDimReduction(BaseEstimator, TransformerMixin):

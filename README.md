@@ -1,4 +1,4 @@
-# Learning Environment Models with Continuous Stochastic Dynamics 
+# Learning Environment Models with Continuous Stochastic Dynamics - with an Application to Deep RL Testing 
 This repository contains all code required to reproduce experiments reported in "Learning Environment Models with Continuous Stochastic Dynamics" paper.
 
 ## Reproducibility and Setup
@@ -17,6 +17,19 @@ To install requirements:
 pip install -r requirements.txt
 ```
 
+## Code structure
+Main files:
+- main.py - an example file which can be used to learn enviromental models of well established RL benchmarks. Example on how to use our approach
+- iterative_refinement.py - file which contains code which iteratively refines learned model with respect to some goal
+- diff_testing.py - All code required to differentially test multiple RL agents
+ 
+Util files:
+- trace_abstraction.py - convert high dimensional sequances to their abstract/discrete representations
+- discretization_pipeline.py - helper file with methods used to reduce data dimensions
+- schedulers.py - interface between learned MDPs and PRISM
+- visualization_util.py - visualize results of experiments
+- utils.py - minor utility functions
+
 ## Learning Environment Models with Continuous Stochastic Dynamics
 To reproduce an experiment, simply call `experiment_cmd_runner.py` with appropriate arguments, as shown in the following line:
 ```
@@ -27,6 +40,10 @@ Alternatively, you can change variable values in `main.py` and execute any exper
 To set a constant random seed for reproducibility, simply define an --seed argument or set the seed in the 'main.py' file.
 
 To visualize the plots found in the paper, run `visualization_util.py`. Visualization_util can also be used to visualize new runs.
+
+### Output structure
+Outputs of iterative refinements will be printed to console as the algorithm progresses, and after every refinement iteration multiple values will be saved to a pickle, so that experiments can be reproduced afterwards. 
+For more details, check the bottom of `iteratively_refine_model` function in `iterative_refinement.py`.
 
 ## Differential Testing
 All code required to differentially test 2 agents with CASTLE is found in `diff_testing.py`.
