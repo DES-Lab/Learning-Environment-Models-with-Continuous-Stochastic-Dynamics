@@ -36,7 +36,7 @@ lockfile==0.12.2
 lz4==4.0.2
 Markdown==3.4.1
 MarkupSafe==2.1.1
-matplotlib==3.6.2
+matplotlib==3.6.3
 matplotlib2tikz==0.7.6
 numpy==1.23.4
 oauthlib==3.2.2
@@ -68,7 +68,6 @@ rsa==4.9
 sb3-contrib==1.6.2
 scikit-learn==1.1.2
 scipy==1.9.2
-seaborn==0.12.1
 six==1.16.0
 stable-baselines3==1.6.2
 statsmodels==0.13.5
