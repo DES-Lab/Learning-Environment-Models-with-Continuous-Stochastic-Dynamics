@@ -11,6 +11,7 @@ Code has been tested with Python 3.9 and Prism 4.7.
 python -m venv myenv
 source myenv/bin/activate // Linux and Mac
 myenv\Scripts\activate.bat // Windows
+python -m pip install --upgrade pip // update pip
 ```
 To install requirements:
 ```
