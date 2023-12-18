@@ -1,3 +1,5 @@
+![](https://github.com/emuskardin/clustering_rl_policies/blob/refactor/figures/castle_intro.PNG)
+
 # Learning Environment Models with Continuous Stochastic Dynamics - with an Application to Deep RL Testing 
 This repository contains all code required to reproduce experiments reported in "Learning Environment Models with Continuous Stochastic Dynamics" paper.
 
