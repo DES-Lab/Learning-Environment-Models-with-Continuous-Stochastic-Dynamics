@@ -1,0 +1,222 @@
+% This file was created with tikzplotlib v0.10.1.
+\begin{tikzpicture}
+
+\definecolor{darkgray176}{RGB}{176,176,176}
+\definecolor{green01270}{RGB}{0,127,0}
+\definecolor{lightgray204}{RGB}{204,204,204}
+
+\begin{axis}[
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, draw=lightgray204},
+tick align=outside,
+tick pos=left,
+title={Acrobot: 25 Iterations of 50 Episodes},
+x grid style={darkgray176},
+xlabel={Refinement Round},
+xmin=-0.2, xmax=26.2,
+xtick style={color=black},
+y grid style={darkgray176},
+ylabel={Reward},
+ymin=-789.925, ymax=154.425,
+ytick style={color=black}
+]
+\path [draw=red, fill=red, opacity=0.2]
+(axis cs:1,-295)
+--(axis cs:1,-25)
+--(axis cs:2,-263)
+--(axis cs:3,-63)
+--(axis cs:4,-49)
+--(axis cs:5,-77.25)
+--(axis cs:6,-77)
+--(axis cs:7,-79)
+--(axis cs:8,-76)
+--(axis cs:9,-78)
+--(axis cs:10,-75.25)
+--(axis cs:11,-76)
+--(axis cs:12,-77.25)
+--(axis cs:13,-83)
+--(axis cs:14,-81)
+--(axis cs:15,-79)
+--(axis cs:16,-81)
+--(axis cs:17,-82)
+--(axis cs:18,-80)
+--(axis cs:19,-82.25)
+--(axis cs:20,-78)
+--(axis cs:21,-81.25)
+--(axis cs:22,-81.5)
+--(axis cs:23,-79)
+--(axis cs:24,-82.5)
+--(axis cs:25,-82)
+--(axis cs:25,-156)
+--(axis cs:25,-156)
+--(axis cs:24,-148.5)
+--(axis cs:23,-157)
+--(axis cs:22,-153.5)
+--(axis cs:21,-150.75)
+--(axis cs:20,-150)
+--(axis cs:19,-143.75)
+--(axis cs:18,-142)
+--(axis cs:17,-140)
+--(axis cs:16,-143)
+--(axis cs:15,-143)
+--(axis cs:14,-137)
+--(axis cs:13,-141)
+--(axis cs:12,-138.75)
+--(axis cs:11,-142)
+--(axis cs:10,-142.75)
+--(axis cs:9,-140)
+--(axis cs:8,-134)
+--(axis cs:7,-143)
+--(axis cs:6,-145)
+--(axis cs:5,-146.75)
+--(axis cs:4,-231)
+--(axis cs:3,-462)
+--(axis cs:2,-737)
+--(axis cs:1,-295)
+--cycle;
+
+\path [draw=blue, fill=blue, opacity=0.2]
+(axis cs:1,-649.25)
+--(axis cs:1,-141.75)
+--(axis cs:2,-451)
+--(axis cs:3,-253)
+--(axis cs:4,55)
+--(axis cs:5,111.5)
+--(axis cs:6,-50)
+--(axis cs:7,-18)
+--(axis cs:8,-67.5)
+--(axis cs:9,-86.75)
+--(axis cs:10,-89.25)
+--(axis cs:11,-96.5)
+--(axis cs:12,-84.75)
+--(axis cs:13,-37.5)
+--(axis cs:14,-100.25)
+--(axis cs:15,-103.5)
+--(axis cs:16,-86)
+--(axis cs:17,-94.5)
+--(axis cs:18,-84.25)
+--(axis cs:19,-44)
+--(axis cs:20,-95.25)
+--(axis cs:21,-86.5)
+--(axis cs:22,-95)
+--(axis cs:23,-90.5)
+--(axis cs:24,-82)
+--(axis cs:25,-89.25)
+--(axis cs:25,-200.75)
+--(axis cs:25,-200.75)
+--(axis cs:24,-206)
+--(axis cs:23,-198.5)
+--(axis cs:22,-189)
+--(axis cs:21,-204.5)
+--(axis cs:20,-204.75)
+--(axis cs:19,-289)
+--(axis cs:18,-247.75)
+--(axis cs:17,-200.5)
+--(axis cs:16,-206)
+--(axis cs:15,-207.5)
+--(axis cs:14,-195.75)
+--(axis cs:13,-299.5)
+--(axis cs:12,-278.25)
+--(axis cs:11,-201.5)
+--(axis cs:10,-254.75)
+--(axis cs:9,-238.25)
+--(axis cs:8,-319.5)
+--(axis cs:7,-405)
+--(axis cs:6,-314)
+--(axis cs:5,-560.5)
+--(axis cs:4,-585)
+--(axis cs:3,-747)
+--(axis cs:2,-549)
+--(axis cs:1,-649.25)
+--cycle;
+
+\addplot [semithick, red]
+table {%
+1 -160
+2 -500
+3 -262.5
+4 -140
+5 -112
+6 -111
+7 -111
+8 -105
+9 -109
+10 -109
+11 -109
+12 -108
+13 -112
+14 -109
+15 -111
+16 -112
+17 -111
+18 -111
+19 -113
+20 -114
+21 -116
+22 -117.5
+23 -118
+24 -115.5
+25 -119
+};
+\addlegendentry{Mean Reward: Manual Mapper}
+\addplot [semithick, blue]
+table {%
+1 -395.5
+2 -500
+3 -500
+4 -265
+5 -224.5
+6 -182
+7 -211.5
+8 -193.5
+9 -162.5
+10 -172
+11 -149
+12 -181.5
+13 -168.5
+14 -148
+15 -155.5
+16 -146
+17 -147.5
+18 -166
+19 -166.5
+20 -150
+21 -145.5
+22 -142
+23 -144.5
+24 -144
+25 -145
+};
+\addlegendentry{Mean Reward: LDA}
+\addplot [semithick, green01270]
+table {%
+1 -100
+2 -100
+3 -100
+4 -100
+5 -100
+6 -100
+7 -100
+8 -100
+9 -100
+10 -100
+11 -100
+12 -100
+13 -100
+14 -100
+15 -100
+16 -100
+17 -100
+18 -100
+19 -100
+20 -100
+21 -100
+22 -100
+23 -100
+24 -100
+25 -100
+};
+\addlegendentry{RL baseline}
+\end{axis}
+
+\end{tikzpicture}

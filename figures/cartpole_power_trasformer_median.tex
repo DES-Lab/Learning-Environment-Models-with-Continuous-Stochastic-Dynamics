@@ -1,0 +1,98 @@
+% This file was created with tikzplotlib v0.10.1.
+\begin{tikzpicture}
+
+\definecolor{darkgray176}{RGB}{176,176,176}
+\definecolor{green01270}{RGB}{0,127,0}
+\definecolor{lightgray204}{RGB}{204,204,204}
+
+\begin{axis}[
+legend cell align={left},
+legend style={fill opacity=0.8, draw opacity=1, text opacity=1, draw=lightgray204},
+tick align=outside,
+tick pos=left,
+title={Cartpole: 15 Iterations of 50 Episodes},
+x grid style={darkgray176},
+xlabel={Refinement Round},
+xmin=0.3, xmax=15.7,
+xtick style={color=black},
+y grid style={darkgray176},
+ylabel={Reward},
+ymin=-34.4375, ymax=288.6875,
+ytick style={color=black}
+]
+\path [draw=red, fill=red, opacity=0.2]
+(axis cs:1,1.75)
+--(axis cs:1,44.25)
+--(axis cs:2,132.75)
+--(axis cs:3,104.5)
+--(axis cs:4,124.25)
+--(axis cs:5,178.75)
+--(axis cs:6,246.25)
+--(axis cs:7,274)
+--(axis cs:8,235.5)
+--(axis cs:9,265)
+--(axis cs:10,243.75)
+--(axis cs:11,201)
+--(axis cs:12,269.25)
+--(axis cs:13,255)
+--(axis cs:14,201)
+--(axis cs:15,204)
+--(axis cs:15,198)
+--(axis cs:15,198)
+--(axis cs:14,201)
+--(axis cs:13,147)
+--(axis cs:12,132.75)
+--(axis cs:11,201)
+--(axis cs:10,158.25)
+--(axis cs:9,116)
+--(axis cs:8,40.5)
+--(axis cs:7,114)
+--(axis cs:6,-6.25)
+--(axis cs:5,-19.75)
+--(axis cs:4,1.75)
+--(axis cs:3,-2.5)
+--(axis cs:2,6.25)
+--(axis cs:1,1.75)
+--cycle;
+
+\addplot [semithick, red]
+table {%
+1 23
+2 69.5
+3 51
+4 63
+5 79.5
+6 120
+7 194
+8 138
+9 190.5
+10 201
+11 201
+12 201
+13 201
+14 201
+15 201
+};
+\addlegendentry{Mean Reward}
+\addplot [semithick, green01270]
+table {%
+1 200
+2 200
+3 200
+4 200
+5 200
+6 200
+7 200
+8 200
+9 200
+10 200
+11 200
+12 200
+13 200
+14 200
+15 200
+};
+\addlegendentry{RL baseline}
+\end{axis}
+
+\end{tikzpicture}

@@ -238,7 +238,6 @@ if __name__ == '__main__':
 
     baseline_values = {'MountainCar': -130, 'Acrobot': - 100, 'Cartpole': 200, 'LunarLander': 250}
 
-    #experiments = ['MountainCar']
     experiments = ['LunarLander', 'Acrobot', 'MountainCar', 'Cartpole']
     avg_method = 'mean_stddev'  # 'median_quantiles'
 
