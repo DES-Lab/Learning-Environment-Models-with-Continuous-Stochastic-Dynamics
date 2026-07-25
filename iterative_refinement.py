@@ -3,13 +3,13 @@ from collections import defaultdict
 from statistics import mean, stdev
 
 import numpy as np
-from aalpy.learning_algs import run_JAlergia
+from aalpy.learning_algs import run_Alergia
 
 from discretization_pipeline import get_observations_and_actions
 from schedulers import compute_weighted_clusters, ProbabilisticScheduler, PrismInterface
 from trace_abstraction import create_abstract_traces
 from utils import remove_nan, CARTPOLE_CUTOFF, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, save, load, \
-    mdp_to_state_setup, mdp_from_state_setup
+    mdp_to_state_setup, mdp_from_state_setup, to_alergia_data
 
 
 class IterativeRefinement:
@@ -77,7 +77,7 @@ class IterativeRefinement:
             for episode_index in range(episodes_per_iteration):
                 scheduler.reset()
                 start_rest = time.time()
-                obs = self.env.reset()
+                obs, _ = self.env.reset()
                 end_reset = time.time()
                 step_times += (end_reset - start_rest)
                 ep_rew = 0
@@ -85,7 +85,7 @@ class IterativeRefinement:
                 if self.num_agent_steps:
                     for _ in range(int(self.num_agent_steps)):
                         action, _ = self.agent.predict(obs)
-                        obs, rew, _, _ = self.env.step(action)
+                        obs, rew, _, _, _ = self.env.step(action)
                         ep_rew += rew
                 ep_data = []
 
@@ -103,7 +103,8 @@ class IterativeRefinement:
                     action = np.array(int(scheduler_input[1:]))
                     num_steps_model += 1
                     start_step = time.time()
-                    observation, reward, done, _ = self.env.step(action)
+                    observation, reward, terminated, truncated, _ = self.env.step(action)
+                    done = terminated or truncated
                     end_step = time.time()
                     step_times += (end_step - start_step)
                     # self.env.render()
@@ -163,7 +164,7 @@ class IterativeRefinement:
 
                     if done:
                         dists = self.clustering_fun.transform(abstract_obs)
-                        if self.env_name == 'LunarLander-v2':
+                        if 'LunarLander' in self.env_name:
                             if reward >= 80:
                                 add_info += 'Successfully landed'
                                 num_goal_reached_iteration += 1
@@ -208,10 +209,10 @@ class IterativeRefinement:
             iteration_abstract_traces = create_abstract_traces(self.env_name, concrete_traces, cluster_labels)
 
             self.abstract_traces.extend(iteration_abstract_traces)
-            self.model = run_JAlergia(self.abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar',
-                                      heap_memory='-Xmx12G')
+            self.model = run_Alergia(to_alergia_data(self.abstract_traces), automaton_type='mdp', eps=0.05)
             end_learning = time.time()
-            self.timing_info["learning"].append(end_learning-start_learning)
+            if self.timing_info is not None:
+                self.timing_info["learning"].append(end_learning - start_learning)
             print(f'Refinement {self.current_iteration + 1} model size: {self.model.size} states')
 
             # save results

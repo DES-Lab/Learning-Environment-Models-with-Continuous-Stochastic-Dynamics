@@ -3,12 +3,31 @@ import os
 import pickle
 import random
 
+import gymnasium
+import numpy as np
 from sklearn.cluster import KMeans
 from tqdm import tqdm
 
 CARTPOLE_CUTOFF = 200
 ACROBOT_GOAL = 100
 MOUNTAIN_CAR_GOAL = 130
+
+# gymnasium dropped the LunarLander-v2 id in favour of v3, which is the same environment
+# with a few bug fixes. Experiments keep referring to the environment as LunarLander-v2 so
+# that the pipelines, clusterings and results pickled before the migration remain usable.
+GYMNASIUM_ENV_IDS = {'LunarLander-v2': 'LunarLander-v3'}
+EXPERIMENT_ENV_NAMES = {v: k for k, v in GYMNASIUM_ENV_IDS.items()}
+
+
+def make_env(env_name, **kwargs):
+    """Create `env_name`, translating retired environment ids to their gymnasium equivalent."""
+    return gymnasium.make(GYMNASIUM_ENV_IDS.get(env_name, env_name), **kwargs)
+
+
+def experiment_env_name(env):
+    """Name under which `env` is referred to in experiment and pickle names."""
+    env_id = env.unwrapped.spec.id
+    return EXPERIMENT_ENV_NAMES.get(env_id, env_id)
 
 
 def compute_clusters(data, n_clusters):
@@ -30,24 +49,6 @@ def load(file_name):
         return None
 
 
-def append_samples_to_file(samples, filename='jAlergiaData.txt'):
-    with open(filename, 'a') as f:
-        for sample in samples:
-            s = f'{str(sample[0])},'
-            for i, o in sample[1:]:
-                s += f'{str(i)},{str(o)},'
-            f.write(s[:-1] + '\n')
-
-
-def save_samples_to_file(samples, filename='jAlergiaData.txt'):
-    with open(filename, 'w') as f:
-        for sample in samples:
-            s = f'{str(sample[0])},'
-            for i, o in sample[1:]:
-                s += f'{str(i)},{str(o)},'
-            f.write(s[:-1] + '\n')
-
-
 def delete_file(filename):
     import os
     if os.path.exists(filename):
@@ -61,7 +62,8 @@ def compress_trace(x):
 
 def get_traces_from_policy(agent, env, num_episodes, agent_name,
                            randomness_probabilities=(0,), load_traces=True):
-    traces_name = f'pickles/traces/{env.unwrapped.spec.id}_{agent_name}' \
+    env_name = experiment_env_name(env)
+    traces_name = f'pickles/traces/{env_name}_{agent_name}' \
                   f'_num_ep_{num_episodes}_{str(randomness_probabilities)}.pk'
 
     if load_traces and os.path.exists(traces_name):
@@ -71,22 +73,25 @@ def get_traces_from_policy(agent, env, num_episodes, agent_name,
         return traces
 
     traces = []
-    rand_i = 0
     print(f'Getting demonstrations from an pretrained agent. Included randomness: {randomness_probabilities}')
 
-    for _ in tqdm(range(num_episodes)):
-        curr_randomness = randomness_probabilities[rand_i]
+    for episode in tqdm(range(num_episodes)):
+        # cycle through the randomness levels so that each one gets an equal share of episodes
+        curr_randomness = randomness_probabilities[episode % len(randomness_probabilities)]
 
-        observation = env.reset()
+        observation, _ = env.reset()
         episode_trace = []
         step = 0
         while True:
             if random.random() < curr_randomness:
-                action = random.randint(0, env.action_space.n - 1)
+                # wrapped in an array to match what agent.predict returns, as the actions
+                # stored in the traces are later read with action.item(0)
+                action = np.array(random.randint(0, env.action_space.n - 1))
             else:
                 action, _ = agent.predict(observation)
-            observation, reward, done, info = env.step(action)
-            if "CartPole" in env.unwrapped.spec.id and step >= CARTPOLE_CUTOFF:
+            observation, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
+            if "CartPole" in env_name and step >= CARTPOLE_CUTOFF:
                 done = True
             step += 1
             episode_trace.append((observation.reshape(1, -1), action, reward, done))
@@ -100,6 +105,16 @@ def get_traces_from_policy(agent, env, num_episodes, agent_name,
     save(traces, traces_name)
 
     return traces
+
+
+def to_alergia_data(abstract_traces):
+    """Convert abstract traces to the format expected by AALpy's `run_Alergia`.
+
+    `create_abstract_traces` emits the flat jAlergia layout
+    `[initial_output, input_1, output_1, input_2, output_2, ...]`, while AALpy expects
+    `[initial_output, (input_1, output_1), (input_2, output_2), ...]`.
+    """
+    return [[trace[0]] + list(zip(trace[1::2], trace[2::2])) for trace in abstract_traces]
 
 
 def remove_nan(mdp):

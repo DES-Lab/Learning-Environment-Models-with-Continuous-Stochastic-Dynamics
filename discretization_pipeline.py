@@ -29,10 +29,10 @@ def change_features_lunar_lander(x):
         x = np.expand_dims(x, axis=0)
     transformed = np.zeros(4)
     # transformed[:x.shape[0], :x.shape[1]] = x
-    transformed[0] = x[:, 0] + x[:, 2]
-    transformed[1] = x[:, 1] + x[:, 3]
-    transformed[2] = x[:, 4] + x[:, 5]
-    transformed[3] = x[:, 6] + x[:, 7]
+    transformed[0] = x[0, 0] + x[0, 2]
+    transformed[1] = x[0, 1] + x[0, 3]
+    transformed[2] = x[0, 4] + x[0, 5]
+    transformed[3] = x[0, 6] + x[0, 7]
     return transformed
 
 
@@ -41,10 +41,10 @@ def change_features_acrobot(x):
         x = np.expand_dims(x, axis=0)
     transformed = np.zeros(4)
 
-    transformed[0] = np.arctan(x[:, 0] / x[:, 1])
-    transformed[1] = np.arctan(x[:, 2] / x[:, 3])
-    transformed[2] = x[:, 4]
-    transformed[3] = x[:, 5]
+    transformed[0] = np.arctan(x[0, 0] / x[0, 1])
+    transformed[1] = np.arctan(x[0, 2] / x[0, 3])
+    transformed[2] = x[0, 4]
+    transformed[3] = x[0, 5]
     return transformed
 
 
@@ -80,19 +80,28 @@ class PipelineWrapper(Pipeline):
         return super(PipelineWrapper, self).transform(X)
 
 
-class LunarLanderManualDimReduction(BaseEstimator, TransformerMixin):
+class StatelessTransformer(BaseEstimator, TransformerMixin):
+    """Base for transformers that derive nothing from the data.
+
+    They keep no fitted state, so they are always usable. Saying so explicitly is
+    required because `Pipeline.transform` runs `check_is_fitted` on its last step,
+    which would otherwise reject a stateless transformer.
+    """
 
     def fit(self, X, y=None, **fit_params):
         return self
+
+    def __sklearn_is_fitted__(self):
+        return True
+
+
+class LunarLanderManualDimReduction(StatelessTransformer):
 
     def transform(self, X, y=None):
         return np.array([change_features_lunar_lander(obs).tolist() for obs in X])
 
 
-class AcrobotManualDimReduction(BaseEstimator, TransformerMixin):
-
-    def fit(self, X, y=None, **fit_params):
-        return self
+class AcrobotManualDimReduction(StatelessTransformer):
 
     def transform(self, X, y=None):
         return np.array([change_features_acrobot(obs).tolist() for obs in X])

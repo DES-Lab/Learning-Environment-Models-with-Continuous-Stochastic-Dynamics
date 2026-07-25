@@ -1,8 +1,7 @@
 from random import seed
 
 import aalpy.paths
-import gym
-from aalpy.learning_algs import run_JAlergia
+from aalpy.learning_algs import run_Alergia
 from sklearn.preprocessing import PowerTransformer
 from stable_baselines3 import DQN, PPO
 
@@ -11,7 +10,7 @@ from discretization_pipeline import get_observations_and_actions, PipelineWrappe
     get_k_means_clustering, LunarLanderManualDimReduction, AcrobotManualDimReduction
 from iterative_refinement import IterativeRefinement
 from trace_abstraction import create_abstract_traces
-from utils import get_traces_from_policy
+from utils import get_traces_from_policy, make_env, to_alergia_data
 
 # define a seed for experiment reproducibility
 seed(101)
@@ -26,14 +25,17 @@ env_name = "LunarLander-v2"
 agents = None
 agent_names = None
 
+env = make_env(env_name)
+
+# the env is passed so that the gymnasium spaces replace the gym ones stored in the checkpoints
 if env_name == 'Acrobot-v1':
-    agent = load_agent('sb3/ppo-Acrobot-v1', 'ppo-Acrobot-v1.zip', PPO)
-elif env_name == 'LunarLander-v2':
-    agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN)
+    agent = load_agent('sb3/ppo-Acrobot-v1', 'ppo-Acrobot-v1.zip', PPO, env)
+elif 'LunarLander' in env_name:
+    agent = load_agent('araffin/dqn-LunarLander-v2', 'dqn-LunarLander-v2.zip', DQN, env)
 elif env_name == 'MountainCar-v0':
-    agent = load_agent('sb3/dqn-MountainCar-v0', 'dqn-MountainCar-v0.zip', DQN)
+    agent = load_agent('sb3/dqn-MountainCar-v0', 'dqn-MountainCar-v0.zip', DQN, env)
 elif env_name == 'CartPole-v1':
-    agent = load_agent('sb3/ppo-CartPole-v1', 'ppo-CartPole-v1.zip', PPO)
+    agent = load_agent('sb3/ppo-CartPole-v1', 'ppo-CartPole-v1.zip', PPO, env)
 else:
     print('Env not supported')
     assert False
@@ -47,7 +49,6 @@ num_clusters = num_clusters_per_env[env_name]
 include_randomness_in_sampling = True
 load_all = True
 
-env = gym.make(env_name, )
 traces_file_name = f'{env_name}_{num_traces}_traces'
 
 randomness = (0, 0.05, 0.1, 0.15, 0.2) if include_randomness_in_sampling else (0,)
@@ -61,7 +62,7 @@ dim_red_pipeline = None
 if env_name == 'MountainCar-v0':
     dim_red_pipeline = PipelineWrapper(env_name, num_traces,
                                        [('powerTransformer', PowerTransformer()), ], load_pipeline=load_all)
-if env_name == 'LunarLander-v2':
+if 'LunarLander' in env_name:
     dim_red_pipeline = PipelineWrapper(env_name, num_traces, [
         ('manualMapper', LunarLanderManualDimReduction()),
         ('powerTransformer', PowerTransformer()), ], load_pipeline=load_all)
@@ -84,7 +85,7 @@ k_means_clustering, cluster_labels = get_k_means_clustering(transformed, num_clu
 # create abstract traces
 abstract_traces = create_abstract_traces(env_name, traces, cluster_labels)
 # get initial model
-model = run_JAlergia(abstract_traces, automaton_type='mdp', path_to_jAlergia_jar='alergia.jar', heap_memory='-Xmx12G',)
+model = run_Alergia(to_alergia_data(abstract_traces), automaton_type='mdp', eps=0.05, print_info=True)
 
 ir = IterativeRefinement(env, env_name, model, abstract_traces, dim_red_pipeline, k_means_clustering,
                          scheduler_type='probabilistic', experiment_name_prefix='')

@@ -6,7 +6,6 @@ from collections import Counter, defaultdict
 from statistics import mean
 
 import aalpy.paths
-import gym
 import numpy as np
 import torch
 from scipy.stats import fisher_exact, mannwhitneyu
@@ -20,7 +19,8 @@ from discretization_pipeline import get_observations_and_actions
 from iterative_refinement import IterativeRefinement
 from schedulers import PrismInterface, ProbabilisticScheduler, compute_weighted_clusters
 from trace_abstraction import create_abstract_traces
-from utils import load, mdp_from_state_setup, remove_nan, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, CARTPOLE_CUTOFF
+from utils import load, mdp_from_state_setup, remove_nan, make_env, ACROBOT_GOAL, MOUNTAIN_CAR_GOAL, \
+    CARTPOLE_CUTOFF
 
 # TODO replace path to prism
 aalpy.paths.path_to_prism = "C:/Program Files/prism-4.7/bin/prism.bat"
@@ -41,22 +41,25 @@ def get_cluster_frequency(abstract_traces):
 def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num_episodes=1000, importance_def=0):
     randomness_probabilities = (0, 0.05, 0.1, 0.15, 0.2)
     print('Executing agent policy and assigning importance to each cluster.')
-    rand_i = 0
     concrete_traces = []
     importance_list = []
-    for _ in tqdm(range(num_episodes)):
-        curr_randomness = randomness_probabilities[rand_i]
+    for episode in tqdm(range(num_episodes)):
+        # cycle through the randomness levels so that each one gets an equal share of episodes
+        curr_randomness = randomness_probabilities[episode % len(randomness_probabilities)]
 
-        observation = env.reset()
+        observation, _ = env.reset()
         episode_trace = []
         step = 0
         while True:
             if random.random() < curr_randomness:
-                action = random.randint(0, env.action_space.n - 1)
+                # wrapped in an array to match what agent.predict returns, as the actions
+                # stored in the traces are later read with action.item(0)
+                action = np.array(random.randint(0, env.action_space.n - 1))
             else:
                 action, _ = dqn_agent.predict(observation)
 
-            observation, reward, done, info = env.step(action)
+            observation, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
 
             with torch.no_grad():
                 q_values = dqn_agent.q_net(obs_as_tensor(observation.reshape(1, -1), device=device))
@@ -64,7 +67,7 @@ def get_cluster_importance(dqn_agent, dim_red_pipeline, clustering_function, num
                 importance = max(q_values) - min(q_values)
                 importance_list.append(importance)
 
-            if "CartPole" in env.unwrapped.spec.id and step >= CARTPOLE_CUTOFF:
+            if "CartPole" in env_name and step >= CARTPOLE_CUTOFF:
                 done = True
 
             step += 1
@@ -120,13 +123,14 @@ def agent_suffix(agent, env, env_name, last_observation, ep_steps):
     suffix_steps = 0
     while True:
         action, _ = agent.predict(observation)
-        observation, reward, done, _ = env.step(action)
+        observation, reward, terminated, truncated, _ = env.step(action)
+        done = terminated or truncated
 
         ep_steps += 1
         suffix_steps += 1
 
         if done:
-            if env_name == 'LunarLander-v2':
+            if 'LunarLander' in env_name:
                 if reward >= 80:
                     return 'Landed'
                 if reward < -80:
@@ -147,7 +151,7 @@ def stop_based_on_statistics(results_dict, env_name):
     # return True to stop early
     agent_1, agent_2 = agents_under_test[0][0], agents_under_test[1][0]
 
-    if env_name == 'LunarLander-v2':
+    if 'LunarLander' in env_name:
         f1 = results_dict[agent_1]['Crash'] + results_dict[agent_1]['Time_out']
         f2 = results_dict[agent_2]['Crash'] + results_dict[agent_2]['Time_out']
 
@@ -195,7 +199,7 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
                 target_clusters, num_tests_per_agent=100, allowed_spurious_ration=0.95, verbose=True):
     assert len(agents_under_test) == 2
 
-    if env_name == 'LunarLander-v2' or env_name == 'CartPole-v1':
+    if 'LunarLander' in env_name or env_name == 'CartPole-v1':
         test_results_per_agent = defaultdict(Counter)
     else:
         test_results_per_agent = defaultdict(list)
@@ -250,7 +254,8 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
 
                     action = np.array(int(scheduler_input[1:]))
 
-                    observation, reward, done, _ = env.step(action)
+                    observation, reward, terminated, truncated, _ = env.step(action)
+                    done = terminated or truncated
 
                     ep_steps += 1
 
@@ -269,7 +274,7 @@ def test_agents(env, env_name, model, agents_under_test, dim_reduction_pipeline,
                         agent_suffix_end = time.time()
                         agent_time += (agent_suffix_end - agent_suffix_start)
 
-                        if env_name == 'LunarLander-v2' or env_name == 'CartPole-v1':
+                        if 'LunarLander' in env_name or env_name == 'CartPole-v1':
                             test_results_per_agent[agent_name][test_result] += 1
                         else:
                             test_results_per_agent[agent_name].append(test_result + ep_steps)
@@ -339,7 +344,7 @@ if __name__ == '__main__':
 
     clusters_of_interest = cluster_smallest_frequency[:10]
 
-    env = gym.make(env_name, )
+    env = make_env(env_name)
 
     timing_info = defaultdict(list)
     ir = IterativeRefinement(env=env, env_name=env_name, abstract_traces=abstract_traces,
@@ -357,9 +362,9 @@ if __name__ == '__main__':
         agents_under_test.extend([
             # these two have similar performance
             ('araffin/dqn-LunarLander-v2', load_agent('araffin/dqn-LunarLander-v2',
-                                                      'dqn-LunarLander-v2.zip', DQN)),
+                                                      'dqn-LunarLander-v2.zip', DQN, env)),
             ('araffin/ppo-LunarLander-v2', load_agent('araffin/ppo-LunarLander-v2',
-                                                      'ppo-LunarLander-v2.zip', PPO)),
+                                                      'ppo-LunarLander-v2.zip', PPO, env)),
             # ('araffin/a2c-LunarLander-v2', load_agent('araffin/a2c-LunarLander-v2',
             #                                           'a2c-LunarLander-v2.zip', A2C)),
             # ('sb3/dqn-LunarLander-v2', load_agent('sb3/dqn-LunarLander-v2',
@@ -372,9 +377,9 @@ if __name__ == '__main__':
     if "CartPole" in experiment_data_path:
         agents_under_test.extend([
             ('sb3/dqn-CartPole-v1', load_agent('sb3/dqn-CartPole-v1',
-                                               'dqn-CartPole-v1.zip', DQN)),
+                                               'dqn-CartPole-v1.zip', DQN, env)),
             ('sb3/ppo-CartPole-v1', load_agent('sb3/ppo-CartPole-v1',
-                                               'ppo-CartPole-v1.zip', PPO)),
+                                               'ppo-CartPole-v1.zip', PPO, env)),
         ])
 
     start = time.time()

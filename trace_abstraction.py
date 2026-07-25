@@ -13,7 +13,7 @@ def create_abstract_traces(env_name, traces, cluster_labels, count_same_cluster=
         step = 0
         for obs, action, rew, done in trace:
             abstract_obs = f'c{cluster_labels[i].item(0)}'
-            if env_name == 'LunarLander-v2':
+            if 'LunarLander' in env_name:
                 if abs(obs[0][0]) <= 0.1 and abs(obs[0][1]):
                     abstract_obs += '__close'
                 if rew == 100:
